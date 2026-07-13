@@ -1,0 +1,252 @@
+# 🧠 BrainUp – AI CRM Enrichment
+
+> Automatically enrich CRM records with company websites, business insights and personalized outreach angles using AI.
+
+---
+
+# Why I Built This
+
+During B2B prospecting, I noticed that most CRM records were incomplete.
+
+Typical missing information included:
+
+- Company website
+- Business context
+- Prospecting notes
+- Personalized outreach angles
+
+Without this information, every sales email required manual research before being written.
+
+I built this workflow to eliminate that repetitive work.
+
+Instead of spending several minutes researching every company, the CRM enriches itself automatically.
+
+---
+
+# The Problem
+
+Prospecting quality depends on data quality.
+
+Unfortunately, CRM databases quickly become inconsistent:
+
+- Missing websites
+- Empty notes
+- No business context
+- Generic outreach messages
+
+Sales teams spend valuable time searching Google instead of speaking with prospects.
+
+---
+
+# The Solution
+
+This workflow automatically enriches CRM records by combining:
+
+- Hunter.io
+- Website scraping
+- GPT-4.1
+- Airtable
+- n8n
+
+The result is a CRM containing richer and more actionable information for every prospect.
+
+---
+
+# Workflow Overview
+
+```
+Schedule
+    │
+    ▼
+Read incomplete CRM records
+    │
+    ▼
+Find company website
+(Hunter)
+    │
+    ▼
+Fallback to email domain
+    │
+    ▼
+Scrape website
+    │
+    ▼
+Extract website content
+    │
+    ▼
+GPT generates:
+• Business Notes
+• Outreach Angles
+    │
+    ▼
+Update Airtable
+```
+
+---
+
+# How It Works
+
+## 1. Read CRM
+
+The workflow retrieves every company whose CRM record is incomplete.
+
+Missing fields include:
+
+- Website
+- Notes
+- Prospecting Angles
+
+---
+
+## 2. Website Discovery
+
+If the website is missing:
+
+Priority 1
+
+- Hunter Domain Search
+
+Priority 2
+
+- Email domain extraction
+
+This significantly increases the number of usable CRM records.
+
+---
+
+## 3. Website Analysis
+
+If a website is found:
+
+- HTML is downloaded
+- Scripts removed
+- Useful text extracted
+- Business signals identified
+
+Examples:
+
+- Property valuation
+- Rental management
+- Luxury real estate
+- Multiple agencies
+- Investment
+- Contact forms
+
+---
+
+## 4. AI Enrichment
+
+GPT receives:
+
+- company name
+- website
+- extracted text
+- detected business signals
+
+The model generates two CRM fields:
+
+### Notes
+
+Business summary including:
+
+- estimated company profile
+- services
+- target customers
+- likely challenges
+
+### Outreach Angles
+
+Personalized sales angles including:
+
+- probable pain points
+- conversation starters
+- email hook
+
+---
+
+## 5. CRM Update
+
+Only missing fields are updated.
+
+Existing information is never overwritten.
+
+---
+
+# Technologies
+
+- n8n
+- Airtable
+- Hunter.io API
+- OpenAI GPT-4.1 Mini
+- JavaScript
+- HTTP Requests
+
+---
+
+# Business Benefits
+
+This automation:
+
+- reduces manual prospect research
+- improves CRM quality
+- increases personalization
+- prepares better cold emails
+- standardizes prospect information
+
+Instead of researching every company manually, sales teams receive enriched records ready for outreach.
+
+---
+
+# Why AI?
+
+AI is particularly effective here because every company is different.
+
+Traditional rules cannot summarize thousands of websites into useful sales insights.
+
+GPT transforms raw website content into structured business intelligence.
+
+---
+
+# Current Limitations
+
+This workflow intentionally does NOT:
+
+- verify whether generated insights are 100% correct;
+- detect company changes over time;
+- enrich social media profiles;
+- search LinkedIn;
+- enrich phone numbers;
+- scrape JavaScript-heavy websites;
+- replace human validation.
+
+AI suggestions should always be reviewed before being used in sales conversations.
+
+---
+
+# Future Improvements
+
+Planned improvements:
+
+- LinkedIn enrichment
+- Google Maps data
+- Company size estimation
+- Industry classification
+- CRM scoring
+- Competitor detection
+- Automatic company summaries
+- Multi-language support
+
+
+# Business Impact
+
+By enriching CRM records automatically, sales teams spend less time researching companies and more time speaking with qualified prospects.
+
+The objective is not to replace prospect research completely.
+
+It is to automate the repetitive part while preserving human judgment for high-value interactions.
+
+# License
+
+Private BrainUp workflow.
+
+Sensitive credentials, APIs and customer data have been removed from this repository.
