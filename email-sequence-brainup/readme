@@ -1,0 +1,280 @@
+# 🧠 BrainUp – AI Email Sequence Generator
+
+> Automatically generate personalized cold outreach emails from CRM data using AI.
+
+## Why I Built This
+
+When prospecting manually, I quickly encountered the same problems:
+
+* Writing every email from scratch was time-consuming.
+* Generic templates produced poor response rates.
+* Personalization wasn't scalable.
+* Tracking where each prospect was in the outreach sequence became difficult.
+
+I wanted a system capable of producing **high-quality, personalized drafts** while keeping full control over what gets sent.
+
+Instead of automatically emailing prospects, this workflow generates **reviewable Gmail drafts**. This human validation step reduces the risk of AI mistakes while saving several hours every week.
+
+---
+
+# The Problem
+
+Cold outreach often fails because businesses either:
+
+* send the exact same email to everyone;
+* spend too much time personalizing every message;
+* lose track of follow-ups;
+* stop following up after the first email.
+
+This workflow solves those problems by combining a CRM, AI and workflow automation.
+
+---
+
+# How It Works
+
+```text
+Schedule (Weekdays 08:00)
+        │
+        ▼
+Read prospects from Airtable CRM
+        │
+        ▼
+Filter eligible prospects
+        │
+        ▼
+Determine outreach stage
+        │
+        ▼
+Generate personalized email with GPT
+        │
+        ▼
+Create Gmail Draft
+        │
+        ▼
+Update CRM stage
+```
+
+---
+
+# Workflow Overview
+
+### 1. Trigger
+
+The workflow can be started:
+
+* automatically every weekday at **08:00**
+* manually for testing purposes
+
+---
+
+### 2. Read CRM
+
+Prospects are retrieved from Airtable.
+
+For every record, the workflow extracts information such as:
+
+* Full name
+* Company
+* Website
+* Internal notes
+* Sales angles
+* Current sequence step
+* Response status
+
+---
+
+### 3. Prospect Validation
+
+Only prospects matching the following criteria continue:
+
+* valid email address
+* no previous reply
+* sequence not completed
+* valid CRM record
+
+Invalid or completed prospects are ignored.
+
+---
+
+### 4. AI Personalization
+
+The workflow builds a structured prompt containing:
+
+* company information
+* website
+* CRM notes
+* outreach context
+* current email stage
+
+Depending on the sequence step, the prospect is routed to one of four dedicated AI agents.
+
+---
+
+## Email 1
+
+First contact.
+
+Goal:
+
+* introduce BrainUp
+* identify the agency's activities
+* explain the value proposition
+* ask permission to send a customized visual
+
+---
+
+## Email 2
+
+Follow-up.
+
+Goal:
+
+* send the personalized BrainUp visual
+* explain how BrainUp fits existing processes
+* invite the prospect to a short meeting
+
+This is the only email that automatically attaches a document stored in Google Drive.
+
+---
+
+## Email 3
+
+Value reminder.
+
+Goal:
+
+Show a concrete business case explaining how poor follow-up can cause lost opportunities and how BrainUp addresses that issue.
+
+---
+
+## Email 4
+
+Final follow-up.
+
+Goal:
+
+Politely close the conversation while giving the prospect one final opportunity to respond.
+
+---
+
+# Gmail Integration
+
+Instead of sending emails automatically, the workflow creates **drafts**.
+
+This allows:
+
+* human review
+* final edits
+* attachment verification
+* spam prevention
+
+No email is sent without approval.
+
+---
+
+# CRM Synchronization
+
+After a draft is created successfully, the workflow:
+
+* increments the outreach stage;
+* updates Airtable;
+* prepares the next follow-up.
+
+Updates are grouped into batches to reduce Airtable API requests.
+
+---
+
+# AI Model
+
+Current model:
+
+* GPT-4.1 Mini
+
+The AI returns structured JSON containing:
+
+* selected template
+* email subject
+* email body
+* internal reasoning summary
+
+---
+
+# Technologies
+
+* n8n
+* Airtable
+* OpenAI API
+* Gmail API
+* Google Drive API
+* JavaScript
+
+---
+
+# Why Drafts Instead of Automatic Sending?
+
+This was a deliberate design choice.
+
+While fully automated outreach is possible, keeping a human validation step provides several advantages:
+
+* avoids AI hallucinations;
+* catches personalization mistakes;
+* reduces accidental emails;
+* maintains quality control;
+* keeps the sender responsible for every message.
+
+The workflow optimizes writing—not decision-making.
+
+---
+
+# Current Limitations
+
+This workflow intentionally does **not**:
+
+* send emails automatically;
+* detect positive or negative replies;
+* stop sequences automatically after a reply;
+* optimize send time;
+* perform A/B testing;
+* enrich missing CRM data;
+* scrape company websites;
+* generate attachments dynamically.
+
+These capabilities belong to separate workflows.
+
+---
+
+# Future Improvements
+
+Planned features include:
+
+* reply detection
+* sentiment analysis
+* automatic sequence interruption
+* CRM scoring
+* adaptive email timing
+* multi-language generation
+* automatic company research
+* performance analytics
+* response-rate dashboard
+
+---
+
+# Business Impact
+
+This automation reduces the repetitive work involved in B2B prospecting by:
+
+* generating personalized outreach in seconds;
+* ensuring every prospect follows the correct sequence;
+* keeping CRM data synchronized;
+* reducing manual copy/paste;
+* allowing sales teams to focus on conversations instead of writing emails.
+
+The objective is not to replace salespeople.
+
+It is to eliminate repetitive administrative work so they can spend more time building relationships.
+
+# License
+
+Private BrainUp workflow.
+
+This repository is intended for demonstration and portfolio purposes. Sensitive credentials, production configurations and client data are intentionally excluded.
