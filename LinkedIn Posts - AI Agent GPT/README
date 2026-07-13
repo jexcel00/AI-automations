@@ -1,0 +1,306 @@
+# 🧠 BrainUp – AI LinkedIn Content Generator
+
+> An autonomous AI agent that researches recent news, writes LinkedIn content, generates carousel slides, and delivers everything directly to Telegram.
+
+---
+
+# Why I Built This
+
+Publishing consistently on LinkedIn is one of the highest ROI marketing activities for a small business.
+
+The problem is that creating high-quality posts every week requires a surprising amount of work:
+
+- Finding relevant news
+- Researching trustworthy sources
+- Writing engaging content
+- Creating carousel slides
+- Formatting everything
+- Preparing visuals
+
+I wanted to automate the entire content creation pipeline while keeping full editorial control.
+
+Instead of publishing automatically, the workflow delivers ready-to-review content directly to Telegram.
+
+---
+
+# The Problem
+
+Most LinkedIn creators spend more time creating content than interacting with their audience.
+
+Every post requires:
+
+- research
+- writing
+- design
+- formatting
+- translation
+
+This quickly becomes unsustainable for founders and small teams.
+
+---
+
+# The Solution
+
+This workflow acts as an AI content assistant.
+
+Every week it:
+
+1. Finds recent industry news.
+2. Generates a LinkedIn post.
+3. Creates a carousel when needed.
+4. Produces French and English versions.
+5. Builds visual slides automatically.
+6. Sends everything to Telegram for review.
+
+---
+
+# Workflow Overview
+
+```text
+Schedule
+
+      │
+
+      ▼
+
+Search recent news (Perplexity)
+
+      │
+
+      ▼
+
+Extract useful information
+
+      │
+
+      ▼
+
+GPT-4o writes the post
+
+      │
+
+      ▼
+
+Generate carousel slides
+
+      │
+
+      ▼
+
+Convert HTML → Images
+
+      │
+
+      ▼
+
+Deliver to Telegram
+```
+
+---
+
+# Weekly Content Strategy
+
+The workflow follows a fixed publishing schedule.
+
+## Monday
+
+### Educational Carousel
+
+Goal:
+
+Teach a simple automation concept to non-technical SME owners.
+
+---
+
+## Wednesday
+
+### Proof Post
+
+Goal:
+
+Show a real business result or automation success story.
+
+Focus:
+
+- ROI
+- Before / After
+- Business value
+
+---
+
+## Friday
+
+### Reflection Post
+
+Goal:
+
+Share an opinion or industry trend about AI and automation.
+
+---
+
+# Step-by-Step
+
+## 1. Scheduled Trigger
+
+The workflow automatically starts three times per week.
+
+Each trigger corresponds to a different content strategy.
+
+---
+
+## 2. Perplexity Research
+
+Perplexity searches for recent information published during the last week.
+
+The workflow retrieves:
+
+- title
+- source
+- publication date
+- summary
+
+This guarantees that posts are based on fresh information instead of static prompts.
+
+---
+
+## 3. GPT-4o Content Generation
+
+GPT receives:
+
+- today's content type
+- current news
+- publishing guidelines
+- formatting rules
+
+It generates structured JSON containing:
+
+- French version
+- English version
+- hashtags
+- sources
+- carousel slides (if applicable)
+
+---
+
+## 4. Carousel Generation
+
+For educational posts:
+
+GPT creates:
+
+- Hook
+- 5–8 slides
+- Call to action
+
+Each slide becomes an HTML page.
+
+---
+
+## 5. HTML → Image
+
+Each HTML slide is converted into a high-resolution square image.
+
+This removes the need for Canva or manual design work.
+
+---
+
+## 6. Telegram Delivery
+
+The final output includes:
+
+- LinkedIn post
+- Carousel
+- French version
+- English version
+- Sources
+
+Everything arrives in Telegram ready for review.
+
+Nothing is published automatically.
+
+---
+
+# Technologies
+
+- n8n
+- GPT-4o
+- Perplexity API
+- Telegram API
+- HTML/CSS
+- HCTI
+- JavaScript
+
+---
+
+# Business Benefits
+
+This workflow:
+
+- reduces content creation time
+- keeps posting consistent
+- ensures posts rely on recent information
+- automatically creates visuals
+- centralizes content review
+
+Instead of spending several hours preparing a LinkedIn post, the entire first draft is ready within minutes.
+
+---
+
+# Why Telegram?
+
+Telegram acts as the human validation layer.
+
+The workflow intentionally stops before publishing.
+
+This allows:
+
+- proofreading
+- editing
+- strategic decisions
+- quality control
+
+---
+
+# Current Limitations
+
+This workflow intentionally does NOT:
+
+- publish directly to LinkedIn;
+- respond to comments;
+- analyze post performance;
+- schedule LinkedIn posts;
+- generate custom illustrations with AI;
+- adapt posts using historical engagement data.
+
+The objective is to accelerate content creation—not replace editorial judgment.
+
+---
+
+# Future Improvements
+
+Future versions could include:
+
+- LinkedIn API publishing
+- Performance analytics
+- AI-generated illustrations
+- Personal writing style learning
+- A/B testing
+- Viral hook optimization
+- Engagement prediction
+- Content calendar generation
+
+---
+
+# Business Impact
+
+This automation transforms LinkedIn content creation from a manual, multi-hour process into a structured AI-assisted workflow.
+
+Instead of replacing creativity, it automates research, drafting and formatting so that creators can focus on refining ideas and engaging with their audience.
+
+---
+
+# License
+
+Private BrainUp workflow.
+
+Production credentials, API keys and business prompts have been removed from this repository.
