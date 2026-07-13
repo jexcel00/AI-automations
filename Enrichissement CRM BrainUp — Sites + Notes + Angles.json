@@ -1,0 +1,495 @@
+{
+  "name": "Enrichissement CRM BrainUp — Sites + Notes + Angles",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "Manual2",
+      "name": "Run manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "Sched2",
+      "name": "Schedule quotidien",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2",
+              "name": "run_date",
+              "type": "string",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "Config2",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appa9kgmxKFX4BZK0"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tble9CLWXxWUkr5ZP"
+        },
+        "options": {
+          "fields": [
+            "Entreprise",
+            "Email",
+            "site web",
+            "Notes",
+            "Angles"
+          ]
+        }
+      },
+      "id": "AirtableRead",
+      "name": "Lire CRM incomplets",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        352,
+        304
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "IRdfiqyerJLxW6DT",
+          "name": "Airtable CRM BrainUp"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nfor (const it of $input.all()) {\n  const f = it.json;\n  if (!f.id || !f['Entreprise']) continue;\n  const site = String(f['site web'] || '').trim();\n  const notes = String(f['Notes'] || '').trim();\n  const angles = String(f['Angles'] || '').trim();\n  const need_website = site === '';\n  const need_note = notes === '';\n  const need_angle = angles === '' || angles === '0';\n  if (!need_website && !need_note && !need_angle) continue;\n  out.push({ json: {\n    record_id: f.id,\n    entreprise: String(f['Entreprise']).trim(),\n    email: String(f['Email'] || '').trim(),\n    site_existant: site,\n    need_website,\n    need_note,\n    need_angle\n  }});\n}\nreturn out;"
+      },
+      "id": "Triage",
+      "name": "Triage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hunter.io/v2/domain-search?company={{ encodeURIComponent($json.entreprise) }}&limit=5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "id": "HunterSearch",
+      "name": "Hunter — Trouver domaine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        304
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "sSpDS97PaGVjS8AT",
+          "name": "Hunter QueryAuth - BrainUp"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const orig = $('Triage').item.json;\nconst hunter = $json;\n\nlet website_url = orig.site_existant || '';\nlet website_source = orig.site_existant ? 'existing' : 'not_found';\n\nif (!website_url) {\n  // Priorite 1 : domaine Hunter\n  const hunterDomain = hunter && hunter.data && hunter.data.domain;\n  if (hunterDomain) {\n    website_url = 'https://' + hunterDomain;\n    website_source = 'hunter';\n  }\n  // Priorite 2 : domaine de l'email (fallback)\n  else if (orig.email && orig.email.includes('@')) {\n    const domain = orig.email.split('@')[1];\n    if (domain && domain.includes('.') && !domain.includes('gmail') && !domain.includes('yahoo') && !domain.includes('hotmail') && !domain.includes('outlook')) {\n      website_url = 'https://' + domain;\n      website_source = 'email_domain';\n    }\n  }\n}\n\nreturn { json: {\n  record_id: orig.record_id,\n  entreprise: orig.entreprise,\n  email: orig.email,\n  site_existant: orig.site_existant,\n  need_website: orig.need_website,\n  need_note: orig.need_note,\n  need_angle: orig.need_angle,\n  website_url,\n  website_source\n}};\n"
+      },
+      "id": "MergeData",
+      "name": "Assembler donnees",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website_url || 'https://example.com' }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 7000
+        }
+      },
+      "id": "ScrapeWebsite",
+      "name": "Scraper site",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const prev = $('Assembler donnees').item.json;\nconst html = $json.data || $json.body || '';\n\nconst strip = s => String(s||'')\n  .replace(/<script[\\s\\S]*?<\\/script>/gi,' ')\n  .replace(/<style[\\s\\S]*?<\\/style>/gi,' ')\n  .replace(/<[^>]+>/g,' ')\n  .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&[a-z]+;/gi,' ')\n  .replace(/\\s+/g,' ').trim();\n\nconst texte = (prev.website_source !== 'not_found') ? strip(html).slice(0, 4500) : '';\nconst low = texte.toLowerCase();\n\nconst signaux = {\n  estimation: /estimation|estimer|valeur.*bien/.test(low),\n  gestion_locative: /gestion locative|gerance/.test(low),\n  formulaire: /formulaire|nous contacter/.test(low),\n  rappel: /rappel gratuit|etre rappel/.test(low),\n  equipe: /notre equipe|nos collaborateurs/.test(low),\n  multi: /nos agences|plusieurs agences/.test(low),\n  transaction: /achat|vente|acheter|vendre/.test(low),\n  location: /location|louer|locataire/.test(low),\n  luxe: /prestige|luxe|haut de gamme/.test(low)\n};\n\nconst manquants = [];\nif (prev.need_note) manquants.push('Notes');\nif (prev.need_angle) manquants.push('Angles');\n\nconst ai_input = [\n  'ENTREPRISE : ' + prev.entreprise,\n  'SITE WEB : ' + (prev.website_url || 'non trouve'),\n  'SOURCE : ' + prev.website_source,\n  '',\n  'SIGNAUX : ' + JSON.stringify(signaux),\n  '',\n  'CHAMPS A GENERER : ' + (manquants.join(', ') || 'aucun'),\n  '',\n  '=== TEXTE DU SITE ===',\n  texte || '(site non accessible - base uniquement sur le nom de l entreprise et son secteur)',\n  '',\n  'Genere les champs manquants.'\n].join('\\n');\n\nreturn { json: { ...prev, texte_site: texte, signaux, ai_input } };"
+      },
+      "id": "ExtractText",
+      "name": "Extraire texte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_input }}",
+        "options": {
+          "systemMessage": "Tu enrichis les fiches CRM de BrainUp, agence qui aide les agences immobilieres francaises a mieux gerer leurs leads.\n\nTu recois le nom d'une entreprise, son site web (si disponible) et le texte extrait de son site.\nTu dois generer UNIQUEMENT les champs indiques dans CHAMPS A GENERER.\n\nSi le site est inaccessible ou non trouve, genere quand meme les champs en te basant sur le nom de l entreprise et le secteur immobilier.\n\n=== Notes (3-5 phrases) ===\n1. Type d agence + taille estimee + localisation si connue\n2. Services probables / visibles (transaction, gestion locative, estimation vendeur, investissement)\n3. Cible clientele probable\n4. Signal fort si visible sur le site (sinon note que le site n etait pas accessible)\n5. Douleur ou risque probable pour ce type d agence\n\n=== Angles (2-3 lignes + accroche) ===\nLigne 1 : [Signal / contexte] -> [Douleur probable] -> [Angle d approche]\nLigne 2 : Angle secondaire si pertinent\nDerniere ligne - Accroche : 1 phrase utilisable directement en Email 1\n\nREGLE : si site accessible, base-toi sur les signaux reels. Si non, genere a partir du nom et du secteur.\nReponds en JSON strict uniquement :\n{\"Notes\": \"...\", \"Angles\": \"...\"}",
+          "maxIterations": 2
+        }
+      },
+      "id": "AIEnrich",
+      "name": "AI — Notes et Angles",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1648,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const src = $('Extraire texte').item.json;\nif (!src || !src.record_id) return null;\n\nlet ai = {};\ntry {\n  const raw = String($json.output || $json.text || '{}').trim();\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) ai = JSON.parse(m[0]);\n} catch(e) {}\n\nconst runDate = $('Config').first().json.run_date;\nconst fields = { id: src.record_id };\n\nif (src.need_website && src.website_url && src.website_source !== 'not_found') {\n  fields['site web'] = src.website_url;\n}\nif (src.need_note && ai.Notes) {\n  fields['Notes'] = String(ai.Notes).trim();\n}\nif (src.need_angle && ai.Angles) {\n  fields['Angles'] = String(ai.Angles).trim();\n}\nfields['Dernier contact'] = runDate;\n\nconst aEcrire = Object.keys(fields).filter(k => k !== 'id' && k !== 'Dernier contact').length > 0;\nif (!aEcrire) return null;\n\nreturn { json: fields };"
+      },
+      "id": "MapUpdate",
+      "name": "Preparer ecriture",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appa9kgmxKFX4BZK0"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tble9CLWXxWUkr5ZP"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "AirtableWrite",
+      "name": "Airtable — Ecrire CRM",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2144,
+        304
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "IRdfiqyerJLxW6DT",
+          "name": "Airtable CRM BrainUp"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst ok = items.filter(i => i.json && i.json.id && !i.json.error).length;\nreturn [{ json: { date: new Date().toISOString().slice(0,10), mis_a_jour: ok, erreurs: items.length - ok }}];"
+      },
+      "id": "BuildSummary2",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ErrTrig2",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        576,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { workflow: 'Enrichissement CRM', message: String(($json||{}).message||'erreur'), time: new Date().toISOString() }};"
+      },
+      "id": "ErrLog2",
+      "name": "Error Logger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1520,
+        496
+      ],
+      "id": "ff2e44ac-f562-4db7-9c84-1554c636a636",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "HpaahXNEPhGqs9se",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run manuel": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule quotidien": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Lire CRM incomplets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire CRM incomplets": {
+      "main": [
+        [
+          {
+            "node": "Triage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage": {
+      "main": [
+        [
+          {
+            "node": "Hunter — Trouver domaine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hunter — Trouver domaine": {
+      "main": [
+        [
+          {
+            "node": "Assembler donnees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assembler donnees": {
+      "main": [
+        [
+          {
+            "node": "Scraper site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scraper site": {
+      "main": [
+        [
+          {
+            "node": "Extraire texte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraire texte": {
+      "main": [
+        [
+          {
+            "node": "AI — Notes et Angles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI — Notes et Angles": {
+      "main": [
+        [
+          {
+            "node": "Preparer ecriture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparer ecriture": {
+      "main": [
+        [
+          {
+            "node": "Airtable — Ecrire CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable — Ecrire CRM": {
+      "main": [
+        [
+          {
+            "node": "Build Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI — Notes et Angles",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris",
+    "saveDataErrorExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "ce8aef2f-4278-4ee2-8030-ba96d5fa5a57",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "cFOn1Quppc9K7Ajv",
+  "tags": []
+}
