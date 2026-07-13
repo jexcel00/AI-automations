@@ -1,0 +1,999 @@
+{
+  "name": "Rédacteur Emails BrainUp — Séquence (CRM Brain UP)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "sched",
+      "name": "Schedule jours ouvrés",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        -80
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Run manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appa9kgmxKFX4BZK0",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tble9CLWXxWUkr5ZP",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "search",
+      "name": "Airtable — Lire prospects",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -464,
+        0
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "IRdfiqyerJLxW6DT",
+          "name": "Airtable CRM BrainUp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function clean(v){return(v===undefined||v===null)?'':String(v).replace(/[\\s​﻿]+/g,' ').trim();}\nfunction cleanEmail(e){return e.replace(/[\\s​﻿]/g,'').toLowerCase().replace(/\\.+$/,'');}\nfunction isValidEmail(e){return /^[^\\s@]+@[^\\s@]+\\.[^\\s@.]+$/.test(e);}\nconst DAY_LABEL={1:'Jour 1',2:'Jour 3',3:'Jour 7',4:'Jour 12'};\nconst EMAIL_NAME={1:'Email 1',2:'Email 2',3:'Email 3',4:'Email 4'};\nconst out=[];\nfor(const it of $input.all()){\n  const rec=it.json||{};const f=rec.fields||rec;const id=rec.id||f.id;\n  if(!id)continue;\n  if(f['A répondu']===true)continue;\n  const etape=Number(f['Étape']||0);\n  if(etape>=4)continue;\n  const emailRaw=clean(f['Email']);\n  const email=cleanEmail(emailRaw);\n  if(!email||email==='non trouvé'||!isValidEmail(email))continue;\n  const target=etape+1;\n  const nomComplet=clean(f['Nom complet']);const parts=nomComplet.trim().split(/\\s+/);\n  const prenom=parts[0]||'Bonjour';const entreprise=clean(f['Entreprise']);\n  const siteWeb=clean(f['site web']);const notes=clean(f['Notes']);const angles=clean(f['Angles']);\n  const lines=['ETAPE : '+EMAIL_NAME[target]+' ('+DAY_LABEL[target]+')','','CONTACT','- Prénom : '+(prenom||'?'),'- Nom complet : '+(nomComplet||'?'),'- Email : '+email,'- Entreprise : '+(entreprise||'?'),'- Site web : '+(siteWeb||'?'),'','ANALYSE CRM','- Notes : '+(notes||'non renseigné'),'- Angles : '+(angles||'non renseigné')];\n  out.push({json:{recordId:id,emailDestinataire:email,entreprise,nomComplet,website_url:siteWeb,targetStep:target,today:new Date().toISOString().slice(0,10),ai_input:lines.join('\\n')}});\n}\nreturn out;"
+      },
+      "id": "filter",
+      "name": "Filtrer prospects dus",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw1",
+                    "leftValue": "={{ $json.targetStep }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email 1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw2",
+                    "leftValue": "={{ $json.targetStep }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email 2"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw3",
+                    "leftValue": "={{ $json.targetStep }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email 3"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw4",
+                    "leftValue": "={{ $json.targetStep }}",
+                    "rightValue": 4,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email 4"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "switch_etape",
+      "name": "Switch — Routage par étape",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_input }}",
+        "options": {
+          "systemMessage": "Tu rédiges l'Email 1 d'une séquence de prospection B2B pour BrainUp, outil de gestion des opportunités entrantes pour agences immobilières.\n\nORTHOGRAPHE — RÈGLE ABSOLUE\nApostrophes et accents corrects partout. Virgule après \"Bonjour {Prénom}\". Signature seule sur sa propre ligne précédée d'une ligne vide.\n\nACTIVITÉS\nÀ partir du site web, des Notes et des Angles fournis, identifie 3 activités concrètes de l'agence (2–4 mots chacune : ex. transactions résidentielles, gestion locative, copropriété, immobilier de luxe…).\n\nTEMPLATE (choisis selon le profil)\nA — résidentiel → objet : \"{Ent} — suivi des demandes\"\nB — estimation vendeur → objet : \"{Ent} — demandes d'estimation\"\nC — gestion locative → objet : \"{Ent} — demandes locatives\"\nD — multi-agences → objet : \"{Ent} — suivi entre agences\"\nE — premium/luxe → objet : \"{Ent} — expérience prospect\"\nF — B2B/investissement → objet : \"{Ent} — suivi des opportunités\"\n\nCORPS (structure exacte, pas de lien) :\n\"Bonjour {Prénom},\n\nJ'ai regardé {Entreprise}.\n\nSur des sujets comme {activité 1}, {activité 2} ou {activité 3}, une opportunité ne se perd pas toujours par manque d'intérêt. Elle peut se perdre parce qu'elle n'est pas qualifiée, relancée ou orientée assez clairement vers la bonne personne.\n\nC'est précisément cette couche que BrainUp aide à structurer : réponse, qualification, relance et transmission, sans remplacer les équipes en place.\n\nJ'ai préparé une affiche courte adaptée à {Entreprise} pour résumer l'idée.\n\nJe vous l'envoie ?\n\nTindjou\"\n\nSORTIE JSON UNIQUEMENT (pas de texte autour) :\n{\"Template choisi\":\"A-F\",\"Objet\":\"...\",\"Corps\":\"...\",\"Analyse\":\"1 phrase\"}",
+          "maxIterations": 1
+        }
+      },
+      "id": "agent_e1",
+      "name": "Agent E1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        384,
+        -480
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "lm1",
+      "name": "OpenAI E1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        -640
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "xErriTxz1dnAPEnq",
+          "name": "générateur d'image"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_input }}",
+        "options": {
+          "systemMessage": "Tu rédiges l'Email 2 d'une séquence de prospection B2B pour BrainUp.\n\nORTHOGRAPHE — RÈGLE ABSOLUE\nApostrophes et accents corrects partout. Virgule après \"Bonjour {Prénom}\". Signature seule sur sa propre ligne précédée d'une ligne vide.\n\nOBJET : \"{Entreprise} × BrainUp\" (remplace {Entreprise} par le nom réel de l'entreprise du prospect).\n\nCORPS (structure exacte — remplace uniquement {Prénom} et {Entreprise}) :\n\"Bonjour {Prénom},\n\nMerci pour votre retour.\n\nJe vous partage l'affiche préparée pour {Entreprise}.\n\nElle met en image une idée simple : dans beaucoup d'agences, ce n'est pas toujours la demande qui manque, mais la clarté du suivi entre la première prise de contact, la qualification, la relance et la transmission au bon interlocuteur.\n\nBrainUp est construit sur mesure. Vous pouvez renforcer uniquement la partie qui vous concerne le plus : qualification, relances, transmission interne ou suivi dans votre CRM actuel.\n\nL'objectif n'est pas de remplacer vos équipes, mais de s'adapter à votre fonctionnement existant.\n\nOuvert à 15 minutes pour identifier la partie du parcours qui aurait le plus de valeur pour {Entreprise} ?\n\nTindjou\"\n\nSORTIE JSON UNIQUEMENT (pas de texte autour) :\n{\"Template choisi\":\"A-F\",\"Objet\":\"{Entreprise} × BrainUp\",\"Corps\":\"...\",\"Analyse\":\"1 phrase\"}",
+          "maxIterations": 1
+        }
+      },
+      "id": "agent_e2",
+      "name": "Agent E2",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        384,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "lm2",
+      "name": "OpenAI E2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        -320
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "xErriTxz1dnAPEnq",
+          "name": "générateur d'image"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_input }}",
+        "options": {
+          "systemMessage": "Tu rédiges l'Email 3 d'une séquence de prospection B2B pour BrainUp.\n\nORTHOGRAPHE — RÈGLE ABSOLUE\nApostrophes et accents corrects partout. Virgule après \"Bonjour {Prénom}\". Signature seule sur sa propre ligne précédée d'une ligne vide.\n\nOBJET : \"une opportunité peut se perdre ici\"\n\nCORPS (structure exacte — remplace uniquement {Prénom} et {Entreprise}) :\n\"Bonjour {Prénom},\n\nJe voulais vous partager un exemple très concret.\n\nDans une agence immobilière qui reçoit environ 80 à 120 demandes prospects par mois, une partie des prospects devient inactive après le premier échange.\n\nCe ne sont pas forcément de mauvais prospects.\nCertains ont simplement besoin d'être relancés au bon moment, avec le bon message.\n\nAvec un système de follow-up automatisé, chaque prospect inactif peut recevoir une séquence simple :\n\n1. Appel ou message de closing dans les 5 minutes après le premier signe d'intérêt\n2. Une relance après 24h\n3. Une relance après 3 jours\n4. Une dernière relance après 7 jours\n5. Une alerte à l'équipe si le prospect réagit à une relance\n\nSur ce type de volume, quelques points de conversion en plus peuvent déjà représenter 3 à 5 RDV qualifiés supplémentaires par mois.\n\nC'est précisément ce que BrainUp aide à mettre en place : un système de relance clair, personnalisé et adapté à votre manière de travailler.\n\nL'objectif n'est pas d'ajouter un outil compliqué, mais d'éviter que des opportunités intéressantes se perdent par manque de suivi.\n\nJ'ai préparé une courte affiche adaptée à {Entreprise} pour vous montrer comment cette logique pourrait s'appliquer à votre activité.\n\nJe peux vous l'envoyer ?\n\nTindjou\"\n\nREMPLACEMENTS UNIQUEMENT : {Prénom} et {Entreprise} — ne modifie pas le reste du corps.\n\nSORTIE JSON UNIQUEMENT :\n{\"Template choisi\":\"E3\",\"Objet\":\"une opportunité peut se perdre ici\",\"Corps\":\"...\",\"Analyse\":\"1 phrase\"}",
+          "maxIterations": 1
+        }
+      },
+      "id": "agent_e3",
+      "name": "Agent E3",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        384,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "lm3",
+      "name": "OpenAI E3",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        0
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "xErriTxz1dnAPEnq",
+          "name": "générateur d'image"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_input }}",
+        "options": {
+          "systemMessage": "Tu rédiges l'Email 4 (dernier) d'une séquence de prospection B2B pour BrainUp.\n\nORTHOGRAPHE — RÈGLE ABSOLUE\nApostrophes et accents corrects partout. Virgule après \"Bonjour {Prénom}\". Signature seule sur sa propre ligne précédée d'une ligne vide.\n\nOBJET : \"je ferme le dossier ?\"\n\nCORPS (structure exacte — remplace uniquement {Prénom} et {Entreprise}) :\n\"Bonjour {Prénom},\n\nJe ne veux pas relancer inutilement. BrainUp était peut-être pertinent pour {Entreprise}. Je ferme le dossier ou ça mérite un échange ?\n\nTindjou\"\n\nSORTIE JSON UNIQUEMENT (pas de texte autour) :\n{\"Template choisi\":\"A-F\",\"Objet\":\"je ferme le dossier ?\",\"Corps\":\"...\",\"Analyse\":\"1 phrase\"}",
+          "maxIterations": 1
+        }
+      },
+      "id": "agent_e4",
+      "name": "Agent E4",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        384,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "lm4",
+      "name": "OpenAI E4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        320
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "xErriTxz1dnAPEnq",
+          "name": "générateur d'image"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const src=$('Filtrer prospects dus').item.json;\nlet raw=($json.output!==undefined?$json.output:($json.text||''))+''; raw=raw.trim().replace(/^```[a-zA-Z]*\\s*/,'').replace(/\\s*```$/,'').trim();\nlet parsed; try{parsed=JSON.parse(raw);}catch(e){const m=raw.match(/\\{[\\s\\S]*\\}/);parsed=m?JSON.parse(m[0]):{Objet:'',Corps:raw};}\nconst objet=(parsed.Objet||parsed.objet||'').trim();\nconst corps=(parsed.Corps||parsed.corps||parsed.Email||'').trim();\nconst template=(parsed['Template choisi']||parsed.template||'').trim();\nconst corpsHtml=corps.replace(/\\n/g,'<br>');\nreturn {json:{id:src.recordId,'Objet email du jour':objet,'Corps email du jour':corps,'Corps HTML':corpsHtml,'Email destinataire':src.emailDestinataire,'Template email choisi':template,targetStep:src.targetStep,entreprise:src.entreprise||'',nom_complet:src.nomComplet||''}};\n"
+      },
+      "id": "map",
+      "name": "Map sortie",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "br1",
+                    "leftValue": "={{ $json.targetStep }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Avec pièce jointe"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Standard (E1 / E3 / E4)"
+        }
+      },
+      "id": "switch_brouillon",
+      "name": "Switch — Type de brouillon",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files/1R9PwGem9n6qLdsBYxMmn0oZmn4QBtMPG?alt=media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "http_gdrive_dl",
+      "name": "HTTP Request — Télécharger affiche",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1200,
+        -208
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1hCSMcEQ1o007B0E",
+          "name": "Drive BrainUp"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('Map sortie').item.json['Objet email du jour'] }}",
+        "emailType": "html",
+        "message": "={{ $('Map sortie').item.json['Corps HTML'] }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          },
+          "sendTo": "={{ $('Map sortie').item.json['Email destinataire'] }}"
+        }
+      },
+      "id": "gmail_e2",
+      "name": "Gmail — Brouillon E2",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1472,
+        -208
+      ],
+      "webhookId": "b9c306cf-67a5-425b-95d7-3744c81df06e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8E83Fx5zZ2m2HBds",
+          "name": "BrainUp"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json['Objet email du jour'] }}",
+        "emailType": "html",
+        "message": "={{ $json['Corps HTML'] }}",
+        "options": {
+          "sendTo": "={{ $json['Email destinataire'] }}"
+        }
+      },
+      "id": "gmail_draft",
+      "name": "Gmail — Brouillon",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        208
+      ],
+      "webhookId": "24a659b7-93b9-430e-800f-2617f29161ac",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8E83Fx5zZ2m2HBds",
+          "name": "BrainUp"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const src = $('Map sortie').item.json;\nconst fields = {'Étape': src.targetStep};\nreturn {json: {recordId: src.id, fields}};"
+      },
+      "id": "prep_write",
+      "name": "Préparer écriture Airtable",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputs = $input.all();\nconst records = inputs.map(item => ({id: item.json.recordId, fields: item.json.fields}));\nconst batches = [];\nfor (let i = 0; i < records.length; i += 10) {\n  batches.push(records.slice(i, i + 10));\n}\nreturn batches.map(batch => ({json: {records: batch}}));"
+      },
+      "id": "batcher",
+      "name": "Batcher — Airtable",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://api.airtable.com/v0/appa9kgmxKFX4BZK0/tble9CLWXxWUkr5ZP",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({records: $json.records, typecast: true}) }}",
+        "options": {}
+      },
+      "id": "http_write",
+      "name": "HTTP — Écrire étape Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        0
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "IRdfiqyerJLxW6DT",
+          "name": "Airtable CRM BrainUp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items=$input.all();return [{json:{emails_rediges:items.length,date:new Date().toISOString()}}];"
+      },
+      "id": "summary",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "errtrig",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e=$input.first().json;return [{json:{workflow:'Redacteur emails BrainUp',node:e.execution&&e.execution.lastNodeExecuted,message:e.execution&&e.execution.error&&e.execution.error.message,time:new Date().toISOString()}}];"
+      },
+      "id": "errlog",
+      "name": "Error Logger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⏰ Déclencheurs\n\n**Automatique** : Lun–Ven à 8h00\n\n**Manuel** : pour tests ou relances ponctuelles",
+        "height": 460,
+        "width": 200,
+        "color": 4
+      },
+      "id": "note_triggers",
+      "name": "note_triggers",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📋 Filtrage CRM\n\nLecture Airtable → sélection des prospects à contacter ce jour.\n\n**Critères :**\n- Email valide\n- Non répondu\n- Étape 0–3 (< 4)",
+        "height": 320,
+        "width": 360,
+        "color": 5
+      },
+      "id": "note_filter",
+      "name": "note_filter",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📤 Routage\n\nAiguille chaque prospect vers l'agent IA correspondant à son étape dans la séquence.",
+        "height": 280,
+        "width": 200,
+        "color": 0
+      },
+      "id": "note_routing",
+      "name": "note_routing",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 Génération Email IA\n\n**E1** — Premier contact personnalisé\n\n**E2** — Partage de l'affiche BrainUp\n\n**E3** — Relance sur opportunité perdue\n\n**E4** — Fermeture du dossier\n\n---\nModèle : GPT-4.1-mini",
+        "height": 1300,
+        "width": 400,
+        "color": 4
+      },
+      "id": "note_agents",
+      "name": "note_agents",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -768
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📧 Brouillons Gmail\n\n**E2 (avec pièce jointe)**\nTélécharge l'affiche depuis Google Drive et l'attache au brouillon.\n\n**E1 / E3 / E4 (standard)**\nBrouillon texte uniquement.",
+        "height": 640,
+        "width": 780,
+        "color": 0
+      },
+      "id": "note_brouillons",
+      "name": "note_brouillons",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 💾 Mise à jour Airtable\n\nIncrémente le champ **Étape** après chaque brouillon créé.\n\n**Batcher** : regroupe 10 records par requête PATCH pour éviter le rate limit Airtable (5 req/s).",
+        "height": 280,
+        "width": 1000,
+        "color": 5
+      },
+      "id": "note_airtable",
+      "name": "note_airtable",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        -208
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        976,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "5f4c75ea-e900-4e75-87b9-15f587e6c374",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule jours ouvrés": {
+      "main": [
+        [
+          {
+            "node": "Airtable — Lire prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manuel": {
+      "main": [
+        [
+          {
+            "node": "Airtable — Lire prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable — Lire prospects": {
+      "main": [
+        [
+          {
+            "node": "Filtrer prospects dus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrer prospects dus": {
+      "main": [
+        [
+          {
+            "node": "Switch — Routage par étape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Routage par étape": {
+      "main": [
+        [
+          {
+            "node": "Agent E1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent E2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent E3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent E4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent E1": {
+      "main": [
+        [
+          {
+            "node": "Map sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent E2": {
+      "main": [
+        [
+          {
+            "node": "Map sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent E3": {
+      "main": [
+        [
+          {
+            "node": "Map sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent E4": {
+      "main": [
+        [
+          {
+            "node": "Map sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI E1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent E1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI E2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent E2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI E3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent E3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI E4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent E4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map sortie": {
+      "main": [
+        [
+          {
+            "node": "Switch — Type de brouillon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Type de brouillon": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Télécharger affiche",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail — Brouillon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request — Télécharger affiche": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Brouillon E2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail — Brouillon E2": {
+      "main": [
+        [
+          {
+            "node": "Préparer écriture Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail — Brouillon": {
+      "main": [
+        [
+          {
+            "node": "Préparer écriture Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer écriture Airtable": {
+      "main": [
+        [
+          {
+            "node": "Batcher — Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batcher — Airtable": {
+      "main": [
+        [
+          {
+            "node": "HTTP — Écrire étape Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP — Écrire étape Airtable": {
+      "main": [
+        [
+          {
+            "node": "Build Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris",
+    "saveDataErrorExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "a2881b07-ccd9-4d4c-8a7c-c0b0b3780540",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "9oR5MWT7fjHAvKif",
+  "tags": []
+}
