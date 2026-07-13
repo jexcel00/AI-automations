@@ -1,0 +1,668 @@
+{
+  "name": "LinkedIn Posts - AI Agent GPT-4o",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "trigger_lundi",
+      "name": "Trigger Lundi 08h - Éducation",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 3"
+            }
+          ]
+        }
+      },
+      "id": "trigger_mercredi",
+      "name": "Trigger Mercredi 08h - Preuve",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 5"
+            }
+          ]
+        }
+      },
+      "id": "trigger_vendredi",
+      "name": "Trigger Vendredi 08h - Réflexion",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "theme",
+              "value": "Éducation",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "type",
+              "value": "Éducation",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "format",
+              "value": "carrousel",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "day",
+              "value": "Lundi",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "theme_description",
+              "value": "automation for non-technical SME owners, time-saving business automation, introduction to business process automation, simple automation ideas for small businesses",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set_education",
+      "name": "Set Éducation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "theme",
+              "value": "Preuve",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "type",
+              "value": "Preuve",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "format",
+              "value": "texte",
+              "type": "string"
+            },
+            {
+              "id": "b4",
+              "name": "day",
+              "value": "Mercredi",
+              "type": "string"
+            },
+            {
+              "id": "b5",
+              "name": "theme_description",
+              "value": "automation success stories, before/after results, concrete ROI for SMEs and startups using n8n or workflow automation",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set_preuve",
+      "name": "Set Preuve",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "theme",
+              "value": "Réflexion",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "type",
+              "value": "Réflexion",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "format",
+              "value": "texte",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "day",
+              "value": "Vendredi",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "theme_description",
+              "value": "AI and automation trends and opinions for SME business leaders, impact of automation on small and medium businesses",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set_reflexion",
+      "name": "Set Réflexion",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"model\": \"sonar\", \"search_recency_filter\": \"week\", \"return_citations\": true, \"messages\": [{ \"role\": \"user\", \"content\": \"Find recent content (last 7 days) about: \" + $json.theme_description + \". Return 1 concrete example with: title, source, date, and 3-sentence summary. Be specific and practical. Language: English.\" }] }) }}",
+        "options": {}
+      },
+      "id": "perplexity_node",
+      "name": "Perplexity Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "sxfjLKttqUnLBJgh",
+          "name": "Perplexity API - LinkedIn Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "news_content",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "d2",
+              "name": "theme",
+              "value": "={{ $('Set Éducation').isExecuted ? 'Éducation' : ($('Set Preuve').isExecuted ? 'Preuve' : 'Réflexion') }}",
+              "type": "string"
+            },
+            {
+              "id": "d3",
+              "name": "type",
+              "value": "={{ $('Set Éducation').isExecuted ? 'Éducation' : ($('Set Preuve').isExecuted ? 'Preuve' : 'Réflexion') }}",
+              "type": "string"
+            },
+            {
+              "id": "d4",
+              "name": "format",
+              "value": "={{ $('Set Éducation').isExecuted ? 'carrousel' : 'texte' }}",
+              "type": "string"
+            },
+            {
+              "id": "d5",
+              "name": "day",
+              "value": "={{ $('Set Éducation').isExecuted ? 'Lundi' : ($('Set Preuve').isExecuted ? 'Mercredi' : 'Vendredi') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract_news",
+      "name": "Extraire Actualite",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "openai_direct",
+      "name": "OpenAI GPT4o",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        304
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "HpaahXNEPhGqs9se",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nconst content = response.choices[0].message.content;\n\nif (!content) {\n  throw new Error('OpenAI returned empty content');\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(content);\n} catch (e) {\n  const match = content.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (match) {\n    parsed = JSON.parse(match[1].trim());\n  } else {\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      parsed = JSON.parse(jsonMatch[0]);\n    } else {\n      throw new Error('No valid JSON found: ' + content.substring(0, 300));\n    }\n  }\n}\n\nparsed.generated_at = new Date().toISOString();\n\n// Prépare le texte des slides pour Telegram\nif (parsed.format === 'carrousel' && parsed.slides && parsed.slides.length > 0) {\n  parsed.slides_fr = '\\n\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\nSLIDES (FR)\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' +\n    parsed.slides.map(s => '📌 Slide ' + s.slide + ': ' + s.fr).join('\\n');\n  parsed.slides_en = '\\n\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\nSLIDES (EN)\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' +\n    parsed.slides.map(s => '📌 Slide ' + s.slide + ': ' + s.en).join('\\n');\n} else {\n  parsed.slides_fr = '';\n  parsed.slides_en = '';\n}\n\nreturn [{ json: parsed }];"
+      },
+      "id": "parse_output",
+      "name": "Parser Output Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1680605501",
+        "text": "={{ \n'POST LINKEDIN ' + $json.type + ' — ' + $json.day + ' ' + new Date().toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric'}).toUpperCase() + '\\n\\n' +\n'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' +\n'VERSION FRANÇAISE\\n' +\n'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' +\n$json.post.fr +\n$json.slides_fr + '\\n\\n' +\n'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' +\n'VERSION ANGLAISE\\n' +\n'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' +\n$json.post.en +\n$json.slides_en + '\\n\\n' +\n'Sources : ' + ($json.sources || []).map(s => s.title + ' — ' + s.publisher + ' (' + s.date + ')').join(' | ')\n}}",
+        "additionalFields": {}
+      },
+      "id": "telegram_send",
+      "name": "Envoyer sur Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1712,
+        304
+      ],
+      "webhookId": "b59e4c5e-1e7c-4189-981d-3faa3a2b3543",
+      "credentials": {
+        "telegramApi": {
+          "id": "7rK4fz8I9n9oKqb1",
+          "name": "Telegram Bot - LinkedIn Posts"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.format }}",
+              "rightValue": "carrousel",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if_carrousel",
+      "name": "IF Carrousel",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1680605501",
+        "text": "={{ 'POST LINKEDIN ' + $json.type + ' — ' + $json.day + '\\n\\n' + $json.post.fr + '\\n\\n' + $json.post.en + '\\n\\n👇 Slides' }}",
+        "additionalFields": {}
+      },
+      "id": "envoyer_intro_telegram",
+      "name": "Envoyer Texte Intro Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1952,
+        112
+      ],
+      "webhookId": "8de00564-7f38-4f78-b01f-8624b7e59ca9",
+      "credentials": {
+        "telegramApi": {
+          "id": "7rK4fz8I9n9oKqb1",
+          "name": "Telegram Bot - LinkedIn Posts"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst isC = j.format === 'carrousel';\nconst prompt = 'Tu es assistant LinkedIn pour PMEs. PUBLIC: dirigeants non techniques.\\n\\n' + (isC ? 'CARROUSEL EDUCATION (Lundi): 5-8 slides, intro legere a l automatisation. NE mentionne PAS n8n ni outils. 1 idee/slide max 20 mots, 1 emoji. Slide 1: hook. Slide finale: CTA.' : 'TEXTE ' + j.type + ': Hook->Probleme->Solution->CTA. Max 150 mots. Authentique.') + '\\n\\nSTYLE: simple, 0 jargon, phrases courtes, max 3 emojis texte / 1 emoji slide. FR+EN.\\nHashtags: ' + (isC ? '#Automatisation #PME #NoCode #GagneDuTemps' : j.type === 'Preuve' ? '#Automatisation #PME #ROI #AvantApres' : '#IA #Automatisation #PME #FutureOfWork') + '\\n\\nJSON: {day,type,format,post:{fr,en},slides:[{slide,emoji,fr,en}],hashtags,sources:[{title,publisher,date}]}. slides=[] si texte.';\nconst body = JSON.stringify({model:'gpt-4o',temperature:0.8,max_tokens:4500,response_format:{type:'json_object'},messages:[{role:'system',content:prompt},{role:'user',content:'Type:'+j.type+' Jour:'+j.day+' Format:'+j.format+'\\n\\nActualite Perplexity:\\n'+j.news_content+'\\n\\nRedige FR+EN. JSON uniquement.'}]});\nconst out = {body};\nreturn [{json: out}];\n"
+      },
+      "id": "prepare_prompt",
+      "name": "Préparer Prompt GPT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Parser Output Agent').item.json;\nconst slides = data.slides || [];\nconst total = slides.length;\nif (total === 0) return [{ json: { error: 'No slides' } }];\nreturn slides.map(s => {\n  const em = s.emoji || (s.slide===1?'🚀':s.slide===total?'💡':'✅');\n  const txt = (s.fr||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');\n  const html = '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>*{margin:0;padding:0;box-sizing:border-box}body{width:1080px;height:1080px;background:linear-gradient(135deg,#0f3460,#16213e);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif}.card{width:880px;background:#fff;border-radius:40px;padding:80px 70px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}.badge{background:#0f3460;color:#fff;font-size:18px;font-weight:700;padding:10px 26px;border-radius:30px;margin-bottom:44px;letter-spacing:2px}.emoji{font-size:100px;margin-bottom:32px;line-height:1}.text{font-size:44px;font-weight:800;color:#1a1a2e;line-height:1.3;white-space:pre-line}</style></head><body><div class=\"card\"><div class=\"badge\">SLIDE '+s.slide+' / '+total+'</div><div class=\"emoji\">'+em+'</div><div class=\"text\">'+txt+'</div></div></body></html>';\n  const r = {slide_number: s.slide, html, fr: s.fr, en: s.en, total_slides: total};\n  return {json: r};\n});"
+      },
+      "id": "split_slides",
+      "name": "Générer HTML Slides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hcti.io/v1/image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic {{ Buffer.from('01KQFAABAB4AZ7AGF55660F3E6:019ddea5-2d4b-7de8-9c6e-cf7fd3f6ac71').toString('base64') }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\"html\": $json.html, \"viewport_width\": 1080, \"viewport_height\": 1080, \"device_scale_factor\": 2}) }}",
+        "options": {}
+      },
+      "id": "hcti_api",
+      "name": "HCTI HTML vers Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2464,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "1680605501",
+        "additionalFields": {}
+      },
+      "id": "envoyer_photo_telegram",
+      "name": "Envoyer Photo Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2704,
+        112
+      ],
+      "webhookId": "ae880369-9d8e-4e5a-8f0d-89d5b2b1166a",
+      "credentials": {
+        "telegramApi": {
+          "id": "7rK4fz8I9n9oKqb1",
+          "name": "Telegram Bot - LinkedIn Posts"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1360,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "0c515890-b130-4f83-a1a7-09be03c44aeb",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger Lundi 08h - Éducation": {
+      "main": [
+        [
+          {
+            "node": "Set Éducation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Mercredi 08h - Preuve": {
+      "main": [
+        [
+          {
+            "node": "Set Preuve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Vendredi 08h - Réflexion": {
+      "main": [
+        [
+          {
+            "node": "Set Réflexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Éducation": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Preuve": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Réflexion": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Search": {
+      "main": [
+        [
+          {
+            "node": "Extraire Actualite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT4o": {
+      "main": [
+        [
+          {
+            "node": "Parser Output Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser Output Agent": {
+      "main": [
+        [
+          {
+            "node": "IF Carrousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Carrousel": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Texte Intro Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envoyer sur Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraire Actualite": {
+      "main": [
+        [
+          {
+            "node": "Préparer Prompt GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Prompt GPT": {
+      "main": [
+        [
+          {
+            "node": "OpenAI GPT4o",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer Texte Intro Telegram": {
+      "main": [
+        [
+          {
+            "node": "Générer HTML Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer HTML Slides": {
+      "main": [
+        [
+          {
+            "node": "HCTI HTML vers Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HCTI HTML vers Image": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Photo Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "eedd4a51-2165-41a1-a6d3-46276bf71061",
+  "meta": {
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "Na9Xk3hgiDOJWMp1",
+  "tags": []
+}
