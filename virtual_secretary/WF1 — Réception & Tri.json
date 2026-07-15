@@ -1,0 +1,440 @@
+{
+  "name": "WF1 — Réception & Tri",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "id": "wf1-gmt-001",
+      "name": "📧 Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        -144
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "wf1-ewt-001",
+      "name": "📥 Appel Orchestrateur",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "email_id",
+              "value": "={{ $json.id || $json.email_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "thread_id",
+              "value": "={{ $json.threadId || $json.thread_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "from",
+              "value": "={{ $json.from || $json.source || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "subject",
+              "value": "={{ $json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n5",
+              "name": "content",
+              "value": "={{ $json.snippet || $json.text || $json.content || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf1-set-001",
+      "name": "🔄 Normaliser WF1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -528,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.action_required }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wf1-if-001",
+      "name": "❓ Email Prioritaire?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        128,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.emailId }}",
+        "labelIds": "={{ $json.labelId }}"
+      },
+      "id": "wf1-gml-001",
+      "name": "🏷️ Label needs_response",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        -208
+      ],
+      "webhookId": "227ab2d9-dc8f-41ad-8f9c-a842d1a74b58",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1680605501",
+        "text": "=🚨 *Email prioritaire !*\n*De :* {{ $('🔄 Normaliser WF1').first().json.from }}\n*Objet :* {{ $('🔄 Normaliser WF1').first().json.subject }}\n*Résumé :* {{ $('🧩 Parser JSON').first().json.summary }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf1-tgm-001",
+      "name": "📱 Alerte Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        -192
+      ],
+      "webhookId": "6095c752-8428-4f30-9ac2-b03583d1c2c0",
+      "credentials": {
+        "telegramApi": {
+          "id": "RwbDtppT1PJjMpLC",
+          "name": "Secretaire 99"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "type",
+              "value": "={{ $('🧩 Parser JSON').first().json.type }}",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "priority",
+              "value": "={{ $('🧩 Parser JSON').first().json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "summary",
+              "value": "={{ $('🧩 Parser JSON').first().json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "r4",
+              "name": "action_required",
+              "value": "={{ $('🧩 Parser JSON').first().json.action_required }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf1-set-002",
+      "name": "↩️ Retour WF1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \"Analyse cet email.\\nDe: \" + $json.from + \"\\nObjet: \" + $json.subject + \"\\nContenu: \" + $json.content }}",
+        "options": {
+          "systemMessage": "Tu es un classificateur d'emails. Retourne UNIQUEMENT un objet JSON valide (sans markdown ni texte autour) avec ces champs : {\"type\":\"<newsletter|meeting_request|invoice|high_priority|default>\",\"priority\":\"<high|medium|low>\",\"action_required\":<true|false>,\"summary\":\"<résumé 1 phrase>\"}. Un email nécessite une réponse (action_required: true) si c'est une demande directe, une question, une invitation réunion, ou une urgence. Newsletters, publicités et notifications automatiques = action_required: false."
+        }
+      },
+      "id": "wf1-agt-001",
+      "name": "🤖 Classifier Email",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -288,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "wf1-llm-002",
+      "name": "Claude Haiku - WF1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        208
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "PcfLX8QGhCgVwmOZ",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output || '';\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json?\\n?/g,'').replace(/```/g,'').trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parsed = { type: 'default', priority: 'low', action_required: false, summary: raw.substring(0,100) };\n}\nreturn [{ json: parsed }];"
+      },
+      "id": "wf1-cod-001",
+      "name": "🧩 Parser JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "label"
+      },
+      "id": "wf1-gml-002",
+      "name": "🔍 Get Label ID",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        -160
+      ],
+      "webhookId": "b405bde8-85ab-45bc-8977-cc9cb281bc15",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const labels = $input.all();\nconst label = labels.find(item => item.json.name.toLowerCase() === 'needs_response');\nconst labelId = label ? label.json.id : null;\nif (!labelId) throw new Error('Label needs_response introuvable dans Gmail');\nconst emailId = $('\\ud83d\\udd04 Normaliser WF1').first().json.email_id;\nreturn [{ json: { labelId, emailId } }];"
+      },
+      "id": "wf1-cod-002",
+      "name": "🔧 Trouver ID Label",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -416
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📧 Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser WF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Appel Orchestrateur": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser WF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Email Prioritaire?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Get Label ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "↩️ Retour WF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏷️ Label needs_response": {
+      "main": [
+        [
+          {
+            "node": "📱 Alerte Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Alerte Telegram": {
+      "main": [
+        [
+          {
+            "node": "↩️ Retour WF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Normaliser WF1": {
+      "main": [
+        [
+          {
+            "node": "🤖 Classifier Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Haiku - WF1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 Classifier Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Classifier Email": {
+      "main": [
+        [
+          {
+            "node": "🧩 Parser JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Parser JSON": {
+      "main": [
+        [
+          {
+            "node": "❓ Email Prioritaire?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Get Label ID": {
+      "main": [
+        [
+          {
+            "node": "🔧 Trouver ID Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Trouver ID Label": {
+      "main": [
+        [
+          {
+            "node": "🏷️ Label needs_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "dd424f47-02c3-4de6-b032-08eb28299360",
+  "meta": {
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "HkEARDxdqV7ECKcW",
+  "tags": []
+}
