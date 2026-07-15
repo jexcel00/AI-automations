@@ -1,0 +1,542 @@
+{
+  "name": "WF2 — Assistant Personnel",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "wf2-sch-001",
+      "name": "⏰ Schedule 06:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -800,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "joetindjou6@gmail.com",
+          "mode": "id"
+        },
+        "limit": 10,
+        "options": {}
+      },
+      "id": "wf2-cal-001",
+      "name": "📅 Récupérer Agenda",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        16
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Rxq57GRsRvnFetkH",
+          "name": "Google Calendar account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all().map(i => i.json).filter(e => e && e.summary).map(e => ({ summary: e.summary, start: (e.start && (e.start.dateTime || e.start.date)) || '', end: (e.end && (e.end.dateTime || e.end.date)) || '', attendees: (e.attendees || []).map(a => a.email).filter(Boolean).join(', ') }));\nreturn [{ json: { has_meetings: events.length > 0, events_count: events.length, events, date: $('🔄 Normaliser WF2').first().json.date } }];"
+      },
+      "id": "wf2-cod-001",
+      "name": "🧩 Analyser Agenda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.has_meetings }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wf2-if-001",
+      "name": "❓ Réunions aujourd'hui?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1680605501",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf2-tgm-001",
+      "name": "📱 Brief Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        96
+      ],
+      "webhookId": "48a0d7cc-e2a5-4be6-988e-3c8f70c7f2cf",
+      "credentials": {
+        "telegramApi": {
+          "id": "RwbDtppT1PJjMpLC",
+          "name": "Secretaire 99"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "has_meetings",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "a2",
+              "name": "output",
+              "value": "📅 *Agenda libre aujourd'hui*\n\nAucune réunion prévue. Bonne journée !",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf2-set-002",
+      "name": "📅 Agenda libre",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "has_meetings",
+              "value": "={{ $json.has_meetings || $('🧩 Analyser Agenda').first().json.has_meetings || false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "r2",
+              "name": "events_count",
+              "value": "={{ $json.events_count || $('🧩 Analyser Agenda').first().json.events_count || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "r3",
+              "name": "date",
+              "value": "={{ $('🔄 Normaliser WF2').first().json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "r4",
+              "name": "output",
+              "value": "={{ $json.output || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf2-set-003",
+      "name": "↩️ Retour WF2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1376,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \"Date : \" + $json.date + \"\\nRéunions : \" + JSON.stringify($json.events) }}",
+        "options": {
+          "systemMessage": "Tu es un assistant personnel. Pour chaque réunion dans la liste, fournis en français : heure, sujet, et points clés à préparer. Sois bref et actionnable."
+        }
+      },
+      "id": "wf2-agt-001",
+      "name": "🤖 Préparer Brief",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        544,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "wf2-llm-002",
+      "name": "Claude Sonnet - WF2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        32
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "PcfLX8QGhCgVwmOZ",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        912,
+        16
+      ],
+      "id": "026f9b2b-f52a-49ad-8176-a67e66ed3d41",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ac1",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "create",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wf2-if-002",
+      "name": "❓ Action: créer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -384,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "joetindjou6@gmail.com",
+          "mode": "id"
+        },
+        "start": "={{ $('🔄 Normaliser WF2').first().json.event_start }}",
+        "end": "={{ $('🔄 Normaliser WF2').first().json.event_end }}",
+        "additionalFields": {
+          "description": "Créé via secrétaire IA",
+          "summary": "={{ $('🔄 Normaliser WF2').first().json.event_title }}"
+        }
+      },
+      "id": "wf2-gcal-002",
+      "name": "📅 Créer Événement",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        -240
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Rxq57GRsRvnFetkH",
+          "name": "Google Calendar account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "output",
+              "value": "={{ '✅ Événement créé : *' + $('🔄 Normaliser WF2').first().json.event_title + '*' }}",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "action",
+              "value": "created",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf2-set-004",
+      "name": "📩 Confirmation Création",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nlet data = {};\n\nif (input.query) {\n  const q = input.query.trim();\n  // Try JSON first\n  try {\n    data = JSON.parse(q);\n  } catch(e) {\n    // Parse key=\"value\" or key=value format\n    const matches = q.matchAll(/(\\w+)=[\"']?([^\"'\\s]+)[\"']?/g);\n    for (const m of matches) {\n      data[m[1]] = m[2];\n    }\n  }\n} else {\n  data = input;\n}\n\nreturn [{ json: {\n  trigger_source: data.action ? 'orchestrator' : 'schedule',\n  date: data.date || $now.toFormat('yyyy-MM-dd'),\n  scope: data.scope || 'day',\n  action: data.action || 'read',\n  event_title: data.event_title || '',\n  event_start: data.event_start || '',\n  event_end: data.event_end || ''\n}}];"
+      },
+      "id": "wf2-cod-002",
+      "name": "🔄 Normaliser WF2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "wf2-ewt-003",
+      "name": "📥 Appel Orchestrateur",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        160
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📅 Récupérer Agenda": {
+      "main": [
+        [
+          {
+            "node": "🧩 Analyser Agenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Analyser Agenda": {
+      "main": [
+        [
+          {
+            "node": "❓ Réunions aujourd'hui?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Réunions aujourd'hui?": {
+      "main": [
+        [
+          {
+            "node": "🤖 Préparer Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📅 Agenda libre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Brief Telegram": {
+      "main": [
+        [
+          {
+            "node": "↩️ Retour WF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📅 Agenda libre": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🤖 Préparer Brief": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Sonnet - WF2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 Préparer Brief",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "📱 Brief Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Action: créer?": {
+      "main": [
+        [
+          {
+            "node": "📅 Créer Événement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📅 Récupérer Agenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📅 Créer Événement": {
+      "main": [
+        [
+          {
+            "node": "📩 Confirmation Création",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📩 Confirmation Création": {
+      "main": [
+        [
+          {
+            "node": "↩️ Retour WF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Schedule 06:30": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser WF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Normaliser WF2": {
+      "main": [
+        [
+          {
+            "node": "❓ Action: créer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Appel Orchestrateur": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser WF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "d3935d47-b085-4180-8e85-da5b0650b1d3",
+  "meta": {
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "lj5SzAlL07412wuV",
+  "tags": []
+}
