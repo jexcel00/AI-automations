@@ -1,0 +1,247 @@
+# WF3 — Gestionnaire d’Emails
+
+## Présentation
+
+**WF3 — Gestionnaire d’Emails** est un workflow n8n qui génère automatiquement des brouillons de réponse pour les emails nécessitant une action.
+
+Il surveille les emails portant le label Gmail :
+
+```text
+needs_response
+```
+
+Le workflow récupère le contenu du message, génère une réponse avec Claude Sonnet, crée un brouillon Gmail et avertit l’utilisateur sur Telegram.
+
+---
+
+## Objectif
+
+WF3 réduit le temps consacré à la rédaction des réponses tout en laissant à l’utilisateur le contrôle final.
+
+Le système ne transmet pas directement la réponse au destinataire. Il crée uniquement un brouillon que l’utilisateur peut vérifier, modifier et envoyer.
+
+---
+
+## Fonctionnement général
+
+```text
+Email avec le label needs_response
+                 ↓
+       Normalisation des données
+                 ↓
+       Récupération du message
+                 ↓
+   Génération d’une réponse par IA
+                 ↓
+      Analyse de la sortie JSON
+                 ↓
+      Création du brouillon Gmail
+                 ↓
+        Notification Telegram
+                 ↓
+          Retour vers WF0
+```
+
+---
+
+## Déclencheurs
+
+### Surveillance Gmail
+
+Le workflow vérifie Gmail toutes les minutes avec la requête :
+
+```text
+label:needs_response
+```
+
+### Appel par WF0
+
+Le workflow peut également être exécuté depuis l’orchestrateur grâce au nœud `Execute Workflow Trigger`.
+
+---
+
+## Données normalisées
+
+| Champ       | Description                           |
+| ----------- | ------------------------------------- |
+| `email_id`  | Identifiant Gmail du message          |
+| `thread_id` | Identifiant du fil de discussion      |
+| `from`      | Expéditeur                            |
+| `subject`   | Objet de l’email                      |
+| `action`    | Action à réaliser, `draft` par défaut |
+
+---
+
+## Génération de la réponse
+
+Le workflow utilise :
+
+```text
+Claude Sonnet 4.5
+```
+
+Le modèle reçoit :
+
+* l’expéditeur ;
+* l’objet ;
+* le texte ou l’extrait du message.
+
+Il doit produire une réponse adaptée au contenu de l’email.
+
+---
+
+## Format attendu
+
+Le parser peut traiter une réponse JSON structurée comme :
+
+```json
+{
+  "draft_content": "Bonjour,\n\nMerci pour votre message...",
+  "summary": "Confirmation de disponibilité envoyée",
+  "tone": "professional"
+}
+```
+
+Si le modèle ne renvoie pas un JSON valide, le workflow utilise directement le texte généré comme contenu du brouillon.
+
+---
+
+## Création du brouillon
+
+Le brouillon est créé dans le même fil Gmail.
+
+L’objet prend la forme :
+
+```text
+Re: Objet de l’email original
+```
+
+Le brouillon reste dans Gmail jusqu’à sa validation manuelle.
+
+---
+
+## Notification Telegram
+
+Après la création du brouillon, l’utilisateur reçoit une notification contenant :
+
+* l’expéditeur ;
+* l’objet ;
+* un résumé de la réponse ;
+* un rappel de vérifier Gmail avant l’envoi.
+
+Exemple :
+
+```text
+✉️ Brouillon créé
+
+De : client@entreprise.com
+Objet : Demande de rendez-vous
+Résumé : Proposition de disponibilité préparée.
+
+Vérifiez vos brouillons Gmail avant d’envoyer.
+```
+
+---
+
+## Résultat retourné
+
+```json
+{
+  "draft_created": true,
+  "summary": "Réponse générée",
+  "telegram_notified": true
+}
+```
+
+---
+
+## Prérequis
+
+* une instance n8n ;
+* un compte Gmail ;
+* des credentials Gmail OAuth2 ;
+* un label Gmail `needs_response` ;
+* un compte Anthropic ;
+* une clé API Anthropic ;
+* un bot Telegram ;
+* WF1 pour appliquer automatiquement le label ;
+* WF0 pour l’orchestration.
+
+---
+
+## Installation
+
+1. Importez le workflow dans n8n.
+2. Configurez les credentials Gmail.
+3. Configurez les credentials Anthropic.
+4. Configurez les credentials Telegram.
+5. Créez le label Gmail `needs_response`.
+6. Remplacez le `chat_id` Telegram.
+7. Activez le workflow.
+
+---
+
+## Structure recommandée
+
+```text
+wf3-email-manager/
+├── workflow.json
+├── README.md
+└── screenshots/
+    └── workflow-overview.png
+```
+
+---
+
+## Sécurité
+
+Avant toute publication, vérifiez et retirez :
+
+* les identifiants Gmail ;
+* le `chat_id` Telegram ;
+* les identifiants de credentials ;
+* les identifiants de webhook ;
+* les références propres à votre instance n8n.
+
+Ne publiez jamais :
+
+* une clé API ;
+* un token Telegram ;
+* un secret OAuth2 ;
+* le contenu réel des emails.
+
+---
+
+## Limites actuelles
+
+* le workflow ne traite que les emails labellisés ;
+* les pièces jointes ne sont pas analysées ;
+* les instructions personnalisées reçues depuis WF0 ne sont pas utilisées dans le prompt actuel ;
+* le brouillon ne contient pas nécessairement de signature ;
+* aucun contrôle ne garantit qu’un même email ne sera pas traité plusieurs fois ;
+* le label `needs_response` n’est pas retiré après traitement.
+
+---
+
+## Améliorations possibles
+
+* supprimer ou remplacer le label après création du brouillon ;
+* ajouter un label `draft_created` ;
+* intégrer les instructions de ton venant de WF0 ;
+* utiliser la signature Gmail de l’utilisateur ;
+* analyser l’historique complet du fil ;
+* traiter les pièces jointes ;
+* éviter les doublons ;
+* permettre la validation depuis Telegram ;
+* proposer plusieurs versions de réponse ;
+* gérer plusieurs langues.
+
+---
+
+## Auteur
+
+Projet développé dans le cadre de **BrainUp**, spécialisé dans les systèmes d’automatisation IA pour entreprises.
+
+## Licence
+
+Projet destiné à la démonstration, à l’apprentissage et au portfolio.
