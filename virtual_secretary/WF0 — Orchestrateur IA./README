@@ -1,0 +1,481 @@
+# WF0 — Orchestrateur IA
+
+## Présentation
+
+**WF0 — Orchestrateur IA** est le workflow central d’un système de secrétaire virtuel construit avec **n8n**.
+
+Son rôle est de recevoir une demande, de comprendre l’intention de l’utilisateur, puis de transmettre automatiquement la tâche au workflow spécialisé approprié.
+
+L’orchestrateur peut notamment :
+
+* consulter ou modifier un agenda ;
+* classifier des emails ;
+* préparer des réponses ;
+* générer un briefing quotidien ;
+* envoyer le résultat directement sur Telegram.
+
+---
+
+## Objectif du projet
+
+Ce workflow permet de centraliser plusieurs automatisations dans une seule interface conversationnelle.
+
+Au lieu d’utiliser séparément plusieurs outils ou workflows, l’utilisateur peut simplement envoyer une demande en langage naturel, par exemple :
+
+> Programme une réunion demain à 16 heures.
+
+> Consulte mon agenda de la journée.
+
+> Génère mon briefing du matin.
+
+> Classe cet email selon son niveau de priorité.
+
+L’agent IA analyse ensuite la demande et sélectionne automatiquement le bon workflow.
+
+---
+
+## Fonctionnement général
+
+```text
+Déclencheur programmé ou message Telegram
+                    ↓
+        Normalisation de la demande
+                    ↓
+           Orchestrateur IA
+                    ↓
+      Sélection du workflow spécialisé
+                    ↓
+          Exécution de la tâche
+                    ↓
+        Réponse envoyée sur Telegram
+```
+
+---
+
+## Déclencheurs
+
+Le workflow peut être lancé de deux manières.
+
+### 1. Déclenchement automatique
+
+Un déclencheur planifié exécute le workflow tous les jours à **08:00**.
+
+```cron
+0 8 * * *
+```
+
+Lors de cette exécution, l’orchestrateur demande automatiquement au workflow de briefing de récupérer les informations importantes de la journée.
+
+### 2. Message Telegram
+
+Un webhook permet également de recevoir les messages envoyés par l’utilisateur depuis Telegram.
+
+Le texte du message devient alors la demande transmise à l’agent IA.
+
+---
+
+## Normalisation des données
+
+Avant l’appel de l’agent, le workflow prépare plusieurs informations communes.
+
+| Champ            | Description                                                         |
+| ---------------- | ------------------------------------------------------------------- |
+| `trigger_source` | Indique si la demande vient de Telegram ou du déclencheur programmé |
+| `user_request`   | Contient la demande de l’utilisateur                                |
+| `context_date`   | Date actuelle utilisée comme contexte                               |
+| `chat_id`        | Identifiant Telegram utilisé pour envoyer la réponse                |
+
+Cette étape permet à l’orchestrateur de traiter les demandes de façon uniforme, quelle que soit leur origine.
+
+---
+
+## Agent IA
+
+Le workflow utilise un agent LangChain alimenté par le modèle :
+
+```text
+Claude Sonnet 4.5
+```
+
+L’agent agit comme un **secrétaire IA personnel francophone**.
+
+Il doit fournir des réponses :
+
+* en français ;
+* concises ;
+* directement exploitables ;
+* adaptées à la demande de l’utilisateur.
+
+L’agent dispose de plusieurs outils correspondant à des workflows n8n indépendants.
+
+---
+
+## Workflows connectés
+
+### WF1 — Réception et tri
+
+WF1 est chargé de classifier les messages ou emails entrants.
+
+Il peut être utilisé pour :
+
+* identifier la nature d’un message ;
+* déterminer son niveau de priorité ;
+* orienter le message vers le bon traitement ;
+* faciliter le tri des emails entrants.
+
+Entrée principale :
+
+```json
+{
+  "trigger_source": "wf0",
+  "message": "Message à classifier"
+}
+```
+
+---
+
+### WF2 — Assistant personnel et agenda
+
+WF2 permet de consulter ou de modifier Google Calendar.
+
+Deux actions principales sont disponibles.
+
+#### Consultation de l’agenda
+
+```json
+{
+  "action": "read"
+}
+```
+
+#### Création d’un événement
+
+```json
+{
+  "action": "create",
+  "event_title": "Réunion commerciale",
+  "event_start": "2026-04-08T16:00:00+02:00",
+  "event_end": "2026-04-08T17:00:00+02:00"
+}
+```
+
+Les dates doivent être envoyées au format **ISO 8601** avec le fuseau horaire.
+
+Exemple :
+
+```text
+2026-04-08T16:00:00+02:00
+```
+
+---
+
+### WF3 — Gestionnaire d’emails
+
+WF3 est chargé de préparer les réponses aux emails.
+
+L’orchestrateur peut lui transmettre des instructions concernant :
+
+* le ton ;
+* le contenu attendu ;
+* le niveau de formalité ;
+* les éléments à intégrer dans la réponse.
+
+Entrée principale :
+
+```json
+{
+  "trigger_source": "wf0",
+  "instructions": "Rédiger une réponse professionnelle et concise"
+}
+```
+
+---
+
+### WF4 — Briefings et rappels
+
+WF4 génère les briefings quotidiens.
+
+Il peut notamment rassembler :
+
+* les événements importants du calendrier ;
+* les emails prioritaires ;
+* les rappels ;
+* les tâches importantes ;
+* les informations utiles pour commencer ou terminer la journée.
+
+Le moment de la journée est défini automatiquement :
+
+```text
+morning
+```
+
+ou :
+
+```text
+evening
+```
+
+---
+
+## Mémoire conversationnelle
+
+Le workflow possède une mémoire conversationnelle basée sur l’identifiant Telegram de l’utilisateur.
+
+```text
+Session utilisateur = chat_id Telegram
+```
+
+La mémoire conserve les **10 derniers échanges**.
+
+Elle permet à l’agent de comprendre les demandes qui font référence à un message précédent.
+
+Exemple :
+
+```text
+Utilisateur : Programme une réunion avec Paul demain.
+
+Assistant : À quelle heure ?
+
+Utilisateur : À 16 heures.
+```
+
+Grâce à la mémoire, l’agent peut comprendre que la deuxième réponse concerne la réunion avec Paul.
+
+---
+
+## Envoi des réponses
+
+Après l’exécution de la tâche, la réponse générée par l’orchestrateur est envoyée sur Telegram.
+
+Le message utilise le format :
+
+```text
+Markdown
+```
+
+Cela permet d’afficher des réponses structurées avec :
+
+* du texte en gras ;
+* des listes ;
+* des titres ;
+* des liens ;
+* des éléments importants mis en évidence.
+
+---
+
+## Architecture du système
+
+| Élément               | Technologie             |
+| --------------------- | ----------------------- |
+| Automatisation        | n8n                     |
+| Agent IA              | LangChain Agent         |
+| Modèle de langage     | Claude Sonnet 4.5       |
+| Interface utilisateur | Telegram                |
+| Mémoire               | Buffer Window Memory    |
+| Agenda                | Google Calendar via WF2 |
+| Emails                | Workflows WF1 et WF3    |
+| Briefings             | Workflow WF4            |
+
+---
+
+## Prérequis
+
+Avant d’importer le workflow, vous devez disposer de :
+
+* une instance n8n fonctionnelle ;
+* un compte Anthropic avec une clé API ;
+* un bot Telegram ;
+* les workflows WF1, WF2, WF3 et WF4 ;
+* les identifiants des workflows secondaires ;
+* les autorisations nécessaires pour Google Calendar et Gmail.
+
+---
+
+## Installation
+
+### 1. Importer le workflow
+
+Dans n8n :
+
+1. ouvrez la page des workflows ;
+2. cliquez sur **Import from File** ;
+3. sélectionnez le fichier JSON du workflow ;
+4. vérifiez que tous les nœuds sont correctement importés.
+
+### 2. Configurer Anthropic
+
+Ajoutez vos identifiants Anthropic dans le nœud :
+
+```text
+Claude Sonnet - WF0
+```
+
+### 3. Configurer Telegram
+
+Ajoutez les identifiants de votre bot dans le nœud :
+
+```text
+📱 Briefing Telegram
+```
+
+Vous devez également configurer le webhook Telegram pour qu’il pointe vers l’URL de production du nœud :
+
+```text
+Telegram Webhook
+```
+
+### 4. Connecter les workflows secondaires
+
+Vérifiez que les workflows suivants existent dans votre instance n8n :
+
+* WF1 — Réception & Tri ;
+* WF2 — Assistant Personnel ;
+* WF3 — Gestionnaire d’Emails ;
+* WF4 — Briefings & Rappels.
+
+Si les workflows sont réimportés dans une autre instance n8n, leurs identifiants peuvent changer. Vous devrez alors les sélectionner à nouveau dans chaque nœud `Workflow Tool`.
+
+### 5. Activer le workflow
+
+Lorsque toutes les connexions sont configurées, activez le workflow depuis n8n.
+
+---
+
+## Exemples d’utilisation
+
+### Consulter son agenda
+
+```text
+Quels sont mes rendez-vous aujourd’hui ?
+```
+
+### Créer un événement
+
+```text
+Ajoute une réunion avec l’équipe commerciale demain de 14h à 15h.
+```
+
+### Générer un briefing
+
+```text
+Prépare mon briefing de la journée.
+```
+
+### Traiter un email
+
+```text
+Analyse cet email et indique-moi s’il est urgent.
+```
+
+### Préparer une réponse
+
+```text
+Prépare une réponse professionnelle à cet email.
+```
+
+---
+
+## Structure recommandée du dépôt
+
+```text
+wf0-orchestrateur-ia/
+├── workflow.json
+├── README.md
+├── screenshots/
+│   └── workflow-overview.png
+└── docs/
+    └── architecture.md
+```
+
+---
+
+## Sécurité
+
+Le fichier exporté depuis n8n peut contenir des références vers :
+
+* des identifiants de credentials ;
+* des identifiants de workflows ;
+* des identifiants de webhook ;
+* des identifiants Telegram ;
+* des informations propres à votre instance n8n.
+
+Avant de publier le workflow sur un dépôt public, vérifiez et supprimez toutes les informations sensibles.
+
+Il est notamment recommandé de remplacer :
+
+```text
+chat_id Telegram
+```
+
+par une variable d’environnement ou une valeur configurée dynamiquement.
+
+Ne publiez jamais :
+
+* une clé API ;
+* un token Telegram ;
+* un mot de passe ;
+* une URL de webhook privée ;
+* des données personnelles ;
+* des secrets contenus dans les credentials n8n.
+
+---
+
+## Améliorations possibles
+
+Le projet peut être complété avec :
+
+* une validation avant la création d’un événement ;
+* une gestion des erreurs par workflow ;
+* un historique des actions dans une base de données ;
+* une confirmation Telegram avant les actions sensibles ;
+* la gestion de plusieurs utilisateurs ;
+* des rôles et permissions ;
+* une connexion à Notion, Slack ou Microsoft Teams ;
+* une mémoire persistante avec PostgreSQL ou Redis ;
+* un système de journalisation des appels aux différents workflows.
+
+---
+
+## Cas d’usage
+
+Ce type d’orchestrateur peut être adapté pour :
+
+* un assistant personnel ;
+* un assistant administratif ;
+* un système de gestion d’emails ;
+* un assistant commercial ;
+* un outil interne pour PME ;
+* une secrétaire virtuelle ;
+* un assistant de direction ;
+* un centre de contrôle pour plusieurs automatisations n8n.
+
+---
+
+## Statut du projet
+
+```text
+Actif
+```
+
+Le workflow est actuellement configuré pour :
+
+* lancer un briefing quotidien à 08:00 ;
+* recevoir des demandes depuis Telegram ;
+* utiliser Claude Sonnet comme moteur IA ;
+* appeler quatre workflows spécialisés ;
+* maintenir une mémoire sur les dix derniers échanges ;
+* retourner les résultats directement sur Telegram.
+
+---
+
+## Auteur
+
+Projet développé dans le cadre de **BrainUp**, une initiative spécialisée dans les automatisations IA personnalisées pour les entreprises.
+
+---
+
+## Licence
+
+Ce projet est fourni à des fins de démonstration et d’apprentissage.
+
+Avant toute utilisation en production, vérifiez les règles de sécurité, les autorisations des services connectés et la protection des données personnelles.
