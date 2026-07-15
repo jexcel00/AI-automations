@@ -1,0 +1,245 @@
+# WF2 — Assistant Personnel
+
+## Présentation
+
+**WF2 — Assistant Personnel** est un workflow n8n dédié à la gestion de Google Calendar.
+
+Il permet de :
+
+* consulter l’agenda ;
+* identifier les réunions prévues ;
+* générer un résumé quotidien ;
+* suggérer les points à préparer ;
+* créer de nouveaux événements ;
+* envoyer les informations sur Telegram.
+
+Le workflow peut fonctionner automatiquement ou être appelé par **WF0 — Orchestrateur IA**.
+
+---
+
+## Fonctionnalités
+
+### Consultation de l’agenda
+
+Chaque matin à **06:30**, le workflow récupère jusqu’à 10 événements du calendrier Google connecté.
+
+Pour chaque réunion, il extrait :
+
+* le titre ;
+* l’heure de début ;
+* l’heure de fin ;
+* les participants ;
+* la date concernée.
+
+### Préparation d’un brief
+
+Lorsqu’au moins une réunion est détectée, Claude Sonnet prépare un résumé concis contenant :
+
+* l’heure de la réunion ;
+* son sujet ;
+* les principaux éléments à préparer.
+
+### Détection d’un agenda vide
+
+Lorsqu’aucune réunion n’est prévue, le système envoie le message suivant :
+
+```text
+📅 Agenda libre aujourd’hui
+
+Aucune réunion prévue. Bonne journée !
+```
+
+### Création d’événements
+
+WF2 peut recevoir une demande de création d’événement depuis l’orchestrateur.
+
+Exemple :
+
+```json
+{
+  "action": "create",
+  "event_title": "Réunion commerciale",
+  "event_start": "2026-07-16T14:00:00+02:00",
+  "event_end": "2026-07-16T15:00:00+02:00"
+}
+```
+
+---
+
+## Fonctionnement général
+
+```text
+Déclenchement automatique ou appel de WF0
+                    ↓
+          Normalisation des données
+                    ↓
+        Consultation ou création ?
+             ↙              ↘
+   Lire l’agenda       Créer l’événement
+         ↓                    ↓
+Analyser les réunions      Confirmation
+         ↓                    ↓
+ Générer un brief        Retour à WF0
+         ↓
+ Envoyer sur Telegram
+```
+
+---
+
+## Déclencheurs
+
+Le workflow possède deux entrées principales.
+
+### Déclenchement automatique
+
+```cron
+30 6 * * *
+```
+
+Le workflow s’exécute tous les jours à **06:30**.
+
+### Appel par l’orchestrateur
+
+Le nœud `Execute Workflow Trigger` permet à WF0 de consulter l’agenda ou de créer un événement.
+
+---
+
+## Données d’entrée
+
+| Champ         | Description                                  |
+| ------------- | -------------------------------------------- |
+| `action`      | `read` pour consulter ou `create` pour créer |
+| `date`        | Date concernée                               |
+| `scope`       | Période de consultation                      |
+| `event_title` | Titre du nouvel événement                    |
+| `event_start` | Début au format ISO 8601                     |
+| `event_end`   | Fin au format ISO 8601                       |
+
+---
+
+## Format des dates
+
+Les dates de création doivent respecter le format ISO 8601 avec fuseau horaire.
+
+```text
+2026-07-16T14:00:00+02:00
+```
+
+---
+
+## Intelligence artificielle
+
+Le workflow utilise :
+
+```text
+Claude Sonnet 4.5
+```
+
+Le modèle transforme les événements récupérés en briefing concis et actionnable.
+
+---
+
+## Résultat retourné
+
+Exemple de réponse après consultation :
+
+```json
+{
+  "has_meetings": true,
+  "events_count": 2,
+  "date": "2026-07-16",
+  "output": "Résumé des réunions"
+}
+```
+
+Exemple après création :
+
+```json
+{
+  "action": "created",
+  "output": "✅ Événement créé : Réunion commerciale"
+}
+```
+
+---
+
+## Prérequis
+
+* une instance n8n ;
+* un compte Google Calendar ;
+* des credentials Google Calendar OAuth2 ;
+* un compte Anthropic ;
+* une clé API Anthropic ;
+* un bot Telegram ;
+* WF0 pour les commandes en langage naturel.
+
+---
+
+## Installation
+
+1. Importez le fichier JSON dans n8n.
+2. Configurez les credentials Google Calendar.
+3. Configurez les credentials Anthropic.
+4. Configurez le bot Telegram.
+5. Remplacez l’adresse du calendrier par celle à utiliser.
+6. Remplacez le `chat_id` Telegram.
+7. Activez le workflow.
+
+---
+
+## Structure recommandée
+
+```text
+wf2-assistant-personnel/
+├── workflow.json
+├── README.md
+└── screenshots/
+    └── workflow-overview.png
+```
+
+---
+
+## Sécurité
+
+Avant de publier le workflow, supprimez ou remplacez :
+
+* l’adresse email du calendrier ;
+* le `chat_id` Telegram ;
+* les identifiants de credentials ;
+* les identifiants internes n8n ;
+* les identifiants de webhook.
+
+Ne publiez jamais de clé API, de token ou de secret OAuth2.
+
+---
+
+## Limites actuelles
+
+* les événements sont récupérés avec une limite de 10 ;
+* aucun contrôle de disponibilité n’est effectué avant création ;
+* les participants ne sont pas ajoutés aux nouveaux événements ;
+* aucune confirmation préalable n’est demandée ;
+* le calendrier est défini directement dans le workflow.
+
+---
+
+## Améliorations possibles
+
+* vérifier les conflits horaires ;
+* proposer plusieurs créneaux disponibles ;
+* ajouter des participants ;
+* créer automatiquement un lien Google Meet ;
+* gérer la modification et la suppression d’événements ;
+* envoyer un rappel avant chaque réunion ;
+* prendre en charge plusieurs calendriers ;
+* rendre le calendrier et le `chat_id` dynamiques.
+
+---
+
+## Auteur
+
+Projet développé dans le cadre de **BrainUp**, spécialisé dans les automatisations IA personnalisées.
+
+## Licence
+
+Projet destiné à la démonstration, à l’apprentissage et au portfolio.
