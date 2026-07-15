@@ -1,0 +1,393 @@
+{
+  "name": "WF0 — Orchestrateur IA",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "wf0-sch-001",
+      "name": "⏰ Schedule 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-01",
+              "name": "trigger_source",
+              "value": "={{ $json.body ? 'telegram' : 'schedule' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-02",
+              "name": "user_request",
+              "value": "={{ $json.body && $json.body.message ? $json.body.message.text : 'Génère le briefing du jour : récupère agenda et emails importants via WF4.' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-03",
+              "name": "context_date",
+              "value": "={{ $now.toFormat('cccc d MMMM yyyy') }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-04",
+              "name": "chat_id",
+              "value": "={{ $json.body && $json.body.message ? $json.body.message.chat.id : 1680605501 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf0-set-001",
+      "name": "🔄 Normaliser le trigger",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        512,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_request }}",
+        "options": {
+          "systemMessage": "Tu es un secrétaire IA personnel francophone. Tu as accès à plusieurs outils :\n- WF1 : classifier les emails entrants\n- WF2 : gérer le calendrier Google Calendar\n- WF3 : rédiger des réponses email\n- WF4 : générer le briefing quotidien\n\nRègles IMPORTANTES pour WF2 :\n- Pour CONSULTER l'agenda : passe action=\"read\"\n- Pour CREER un événement (réunion, rendez-vous, etc.) : tu DOIS passer action=\"create\" + event_title + event_start + event_end au format ISO 8601 avec fuseau +02:00 (ex: 2026-04-08T16:00:00+02:00). Ne dis JAMAIS que la création est impossible - utilise toujours action=\"create\" avec les bons paramètres.\n\nRéponds toujours en français, de façon concise et actionnable."
+        }
+      },
+      "id": "wf0-agt-001",
+      "name": "🧠 Orchestrateur IA",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        784,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "wf0-llm-001",
+      "name": "Claude Sonnet - WF0",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        560
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "PcfLX8QGhCgVwmOZ",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "HkEARDxdqV7ECKcW",
+          "mode": "list",
+          "cachedResultName": "WF1 — Réception & Tri"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "trigger_source": "wf0",
+            "message": "={{ $fromAI('message', 'Le message ou email à classifier') }}"
+          }
+        }
+      },
+      "id": "wf0-t01-001",
+      "name": "🔧 WF1 - Classificateur",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lj5SzAlL07412wuV",
+          "mode": "list",
+          "cachedResultName": "WF2 — Assistant Personnel"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "trigger_source": "wf0",
+            "date": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "action": "={{ $fromAI('action', 'OBLIGATOIRE: \"read\" pour consulter le calendrier, \"create\" pour creer un evenement. Si lutilisateur veut programmer/creer/ajouter une reunion, utilise \"create\".') }}",
+            "event_title": "={{ $fromAI('event_title', 'Titre ou sujet de levenement (obligatoire si action=create)') }}",
+            "event_start": "={{ $fromAI('event_start', 'Heure debut ISO 8601 avec fuseau +02:00, ex: 2026-04-08T16:00:00+02:00 (obligatoire si action=create)') }}",
+            "event_end": "={{ $fromAI('event_end', 'Heure fin ISO 8601 avec fuseau +02:00, ex: 2026-04-08T17:00:00+02:00 (obligatoire si action=create)') }}"
+          }
+        }
+      },
+      "id": "wf0-t02-001",
+      "name": "🔧 WF2 - Agenda",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1104,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "FuphXi4nJjs89RuP",
+          "mode": "list",
+          "cachedResultName": "WF3 — Gestionnaire d'Emails"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "trigger_source": "wf0",
+            "instructions": "={{ $fromAI('instructions', 'Instructions optionnelles pour le ton ou le contenu de la réponse') }}"
+          }
+        }
+      },
+      "id": "wf0-t03-001",
+      "name": "🔧 WF3 - Emails",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4RhcvIp72VWyN85t",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/4RhcvIp72VWyN85t",
+          "cachedResultName": "WF4 — Briefings & Rappels"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "trigger_source": "wf0",
+            "time_of_day": "={{ $now.hour < 12 ? 'morning' : 'evening' }}"
+          }
+        }
+      },
+      "id": "wf0-t04-001",
+      "name": "🔧 WF4 - Briefings",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🔄 Normaliser le trigger').first().json.chat_id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf0-tgm-001",
+      "name": "📱 Briefing Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        160
+      ],
+      "webhookId": "9afad180-09a9-457f-a641-d0d63143ca92",
+      "credentials": {
+        "telegramApi": {
+          "id": "RwbDtppT1PJjMpLC",
+          "name": "Secretaire 99"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f8a2b1c4-9d3e-4f7a-8b6c-1d2e3f4a5b6c",
+        "options": {}
+      },
+      "id": "wf0-wbh-001",
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        432
+      ],
+      "webhookId": "f8a2b1c4-9d3e-4f7a-8b6c-1d2e3f4a5b6c"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('🔄 Normaliser le trigger').first().json.chat_id }}",
+        "contextWindowLength": 10
+      },
+      "id": "wf0-mem-001",
+      "name": "💬 Mémoire Conversation",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        560
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "⏰ Schedule 08:00": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser le trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Normaliser le trigger": {
+      "main": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Sonnet - WF0": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 WF1 - Classificateur": {
+      "ai_tool": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 WF2 - Agenda": {
+      "ai_tool": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 WF3 - Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 WF4 - Briefings": {
+      "ai_tool": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Orchestrateur IA": {
+      "main": [
+        [
+          {
+            "node": "📱 Briefing Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Webhook": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser le trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Mémoire Conversation": {
+      "ai_memory": [
+        [
+          {
+            "node": "🧠 Orchestrateur IA",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "7bbaa3b7-6eef-45e9-aace-7ea6f1342b05",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "rBhkbPn9dQhqKUVh",
+  "tags": []
+}
