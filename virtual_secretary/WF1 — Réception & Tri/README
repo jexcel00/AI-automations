@@ -1,0 +1,635 @@
+# WF1 — Réception & Tri des Emails
+
+## Présentation
+
+**WF1 — Réception & Tri** est un workflow n8n conçu pour analyser automatiquement les emails entrants.
+
+Il utilise l’intelligence artificielle pour :
+
+* comprendre le contenu de chaque email ;
+* identifier son type ;
+* déterminer son niveau de priorité ;
+* détecter si une réponse est nécessaire ;
+* ajouter un label Gmail aux emails importants ;
+* envoyer une alerte sur Telegram.
+
+Ce workflow peut fonctionner de manière autonome ou être appelé par le workflow principal **WF0 — Orchestrateur IA**.
+
+---
+
+## Objectif du projet
+
+Le workflow permet de réduire le temps passé à consulter et trier manuellement une boîte mail.
+
+Lorsqu’un nouvel email arrive, le système détermine automatiquement s’il s’agit :
+
+* d’une newsletter ;
+* d’une demande de réunion ;
+* d’une facture ;
+* d’un message prioritaire ;
+* d’un email classique.
+
+Si une action est nécessaire, l’email reçoit automatiquement le label Gmail :
+
+```text
+needs_response
+```
+
+Une notification est ensuite envoyée sur Telegram.
+
+---
+
+## Fonctionnement général
+
+```text
+Nouvel email Gmail
+        ↓
+Normalisation des données
+        ↓
+Analyse par Claude Haiku
+        ↓
+Conversion de la réponse en JSON
+        ↓
+L’email nécessite-t-il une action ?
+        ↓
+   Oui                         Non
+    ↓                           ↓
+Recherche du label         Retour du résultat
+needs_response
+    ↓
+Ajout du label Gmail
+    ↓
+Alerte Telegram
+    ↓
+Retour du résultat
+```
+
+---
+
+## Déclencheurs
+
+Le workflow possède deux points d’entrée.
+
+### 1. Déclencheur Gmail
+
+Le nœud Gmail Trigger vérifie la boîte mail toutes les minutes.
+
+```text
+Fréquence : toutes les minutes
+```
+
+Chaque nouvel email détecté est automatiquement envoyé vers le système de classification.
+
+### 2. Appel depuis l’orchestrateur
+
+Le workflow peut également être exécuté par un autre workflow n8n grâce au nœud :
+
+```text
+📥 Appel Orchestrateur
+```
+
+Cette entrée permet notamment à **WF0 — Orchestrateur IA** d’utiliser WF1 comme un outil spécialisé.
+
+---
+
+## Normalisation des emails
+
+Les informations reçues sont transformées dans une structure commune avant leur analyse.
+
+| Champ       | Description                          |
+| ----------- | ------------------------------------ |
+| `email_id`  | Identifiant Gmail du message         |
+| `thread_id` | Identifiant de la conversation Gmail |
+| `from`      | Adresse ou nom de l’expéditeur       |
+| `subject`   | Objet de l’email                     |
+| `content`   | Contenu, extrait ou texte de l’email |
+
+Cette étape permet au workflow de traiter les emails provenant de Gmail ou d’un autre workflow avec le même format.
+
+---
+
+## Classification par intelligence artificielle
+
+Le workflow utilise le modèle :
+
+```text
+Claude Haiku 4.5
+```
+
+Claude Haiku a été sélectionné pour effectuer une classification rapide et économique des messages.
+
+Le modèle reçoit :
+
+* l’expéditeur ;
+* l’objet ;
+* le contenu de l’email.
+
+Il doit retourner uniquement un objet JSON valide.
+
+---
+
+## Structure de classification
+
+Le résultat attendu possède la structure suivante :
+
+```json
+{
+  "type": "meeting_request",
+  "priority": "high",
+  "action_required": true,
+  "summary": "Le client demande une réunion pour discuter de son projet."
+}
+```
+
+### Champs retournés
+
+| Champ             | Valeurs possibles                                                      | Description                                         |
+| ----------------- | ---------------------------------------------------------------------- | --------------------------------------------------- |
+| `type`            | `newsletter`, `meeting_request`, `invoice`, `high_priority`, `default` | Catégorie de l’email                                |
+| `priority`        | `high`, `medium`, `low`                                                | Niveau de priorité                                  |
+| `action_required` | `true` ou `false`                                                      | Indique si une réponse ou une action est nécessaire |
+| `summary`         | Texte court                                                            | Résumé de l’email en une phrase                     |
+
+---
+
+## Règles de classification
+
+Un email est considéré comme nécessitant une action lorsqu’il contient :
+
+* une demande directe ;
+* une question ;
+* une invitation à une réunion ;
+* une urgence ;
+* une action explicitement demandée.
+
+Les emails suivants ne nécessitent généralement pas de réponse :
+
+* newsletters ;
+* publicités ;
+* promotions ;
+* notifications automatiques ;
+* messages purement informatifs.
+
+---
+
+## Parser JSON
+
+La réponse générée par Claude est traitée par un nœud Code.
+
+Ce nœud :
+
+1. récupère la sortie du modèle ;
+2. supprime les éventuelles balises Markdown ;
+3. transforme le texte en objet JSON ;
+4. utilise une valeur par défaut en cas d’erreur.
+
+Exemple de valeur de secours :
+
+```json
+{
+  "type": "default",
+  "priority": "low",
+  "action_required": false,
+  "summary": "Résumé partiel du message"
+}
+```
+
+Cette protection évite que le workflow s’arrête si le modèle retourne un format incorrect.
+
+---
+
+## Détection des emails prioritaires
+
+Le nœud conditionnel vérifie la valeur :
+
+```text
+action_required
+```
+
+Deux chemins sont alors possibles.
+
+### Une action est nécessaire
+
+Si `action_required` vaut `true` :
+
+1. le workflow récupère la liste des labels Gmail ;
+2. il recherche le label `needs_response` ;
+3. il récupère son identifiant ;
+4. il applique le label à l’email ;
+5. il envoie une alerte Telegram.
+
+### Aucune action n’est nécessaire
+
+Si `action_required` vaut `false`, aucun label ni aucune alerte ne sont ajoutés.
+
+Le workflow retourne directement le résultat de la classification.
+
+---
+
+## Gestion du label Gmail
+
+Le workflow recherche automatiquement le label :
+
+```text
+needs_response
+```
+
+La recherche n’est pas sensible aux majuscules et minuscules.
+
+Le label doit cependant déjà exister dans Gmail.
+
+Si le label est introuvable, le workflow retourne l’erreur :
+
+```text
+Label needs_response introuvable dans Gmail
+```
+
+### Création du label
+
+Avant d’activer le workflow :
+
+1. ouvrez Gmail ;
+2. créez un nouveau label ;
+3. nommez-le exactement `needs_response` ;
+4. enregistrez le label.
+
+---
+
+## Alerte Telegram
+
+Lorsqu’un email nécessite une réponse, une notification Telegram est envoyée.
+
+Exemple :
+
+```text
+🚨 Email prioritaire !
+
+De : client@entreprise.com
+Objet : Demande de rendez-vous
+Résumé : Le client souhaite organiser une réunion cette semaine.
+```
+
+La notification permet de connaître immédiatement :
+
+* l’expéditeur ;
+* l’objet ;
+* le résumé du message.
+
+---
+
+## Données retournées
+
+À la fin de l’exécution, WF1 retourne les informations suivantes :
+
+```json
+{
+  "type": "meeting_request",
+  "priority": "high",
+  "summary": "Le prospect souhaite organiser une démonstration.",
+  "action_required": true
+}
+```
+
+Ces informations peuvent ensuite être utilisées par WF0 ou par un autre workflow.
+
+---
+
+## Architecture technique
+
+| Élément              | Technologie              |
+| -------------------- | ------------------------ |
+| Automatisation       | n8n                      |
+| Réception des emails | Gmail Trigger            |
+| Modèle IA            | Claude Haiku 4.5         |
+| Intégration IA       | LangChain Agent          |
+| Parsing              | JavaScript               |
+| Classification       | JSON structuré           |
+| Organisation         | Labels Gmail             |
+| Notifications        | Telegram                 |
+| Orchestration        | Execute Workflow Trigger |
+
+---
+
+## Prérequis
+
+Pour utiliser ce workflow, vous devez disposer de :
+
+* une instance n8n ;
+* un compte Gmail ;
+* une connexion OAuth2 Gmail configurée dans n8n ;
+* un compte Anthropic ;
+* une clé API Anthropic ;
+* un bot Telegram ;
+* un label Gmail nommé `needs_response` ;
+* WF0 si vous souhaitez utiliser l’orchestration centrale.
+
+---
+
+## Installation
+
+### 1. Importer le workflow
+
+Dans n8n :
+
+1. ouvrez la page des workflows ;
+2. cliquez sur **Import from File** ;
+3. sélectionnez le fichier JSON ;
+4. vérifiez que tous les nœuds sont présents.
+
+### 2. Configurer Gmail
+
+Ajoutez vos identifiants Gmail OAuth2 aux nœuds :
+
+```text
+📧 Gmail Trigger
+```
+
+```text
+🔍 Get Label ID
+```
+
+```text
+🏷️ Label needs_response
+```
+
+Les autorisations Gmail doivent permettre :
+
+* la lecture des emails ;
+* la consultation des labels ;
+* l’ajout de labels aux messages.
+
+### 3. Configurer Anthropic
+
+Ajoutez votre clé API Anthropic dans le nœud :
+
+```text
+Claude Haiku - WF1
+```
+
+### 4. Configurer Telegram
+
+Ajoutez les identifiants de votre bot Telegram dans le nœud :
+
+```text
+📱 Alerte Telegram
+```
+
+Remplacez également l’identifiant de conversation Telegram par votre propre `chat_id`.
+
+### 5. Créer le label Gmail
+
+Créez dans Gmail le label :
+
+```text
+needs_response
+```
+
+### 6. Activer le workflow
+
+Lorsque les credentials et les paramètres sont configurés, activez le workflow.
+
+---
+
+## Exemples de classification
+
+### Demande de réunion
+
+Email :
+
+```text
+Bonjour,
+
+Seriez-vous disponible mercredi pour discuter de notre projet ?
+
+Cordialement.
+```
+
+Résultat :
+
+```json
+{
+  "type": "meeting_request",
+  "priority": "medium",
+  "action_required": true,
+  "summary": "L’expéditeur souhaite organiser une réunion mercredi."
+}
+```
+
+---
+
+### Newsletter
+
+Email :
+
+```text
+Découvrez nos nouveautés et nos offres de la semaine.
+```
+
+Résultat :
+
+```json
+{
+  "type": "newsletter",
+  "priority": "low",
+  "action_required": false,
+  "summary": "Newsletter présentant les nouveautés et promotions de la semaine."
+}
+```
+
+---
+
+### Facture
+
+Email :
+
+```text
+Veuillez trouver en pièce jointe votre facture du mois.
+```
+
+Résultat :
+
+```json
+{
+  "type": "invoice",
+  "priority": "medium",
+  "action_required": false,
+  "summary": "L’expéditeur transmet une facture mensuelle."
+}
+```
+
+---
+
+### Demande urgente
+
+Email :
+
+```text
+Bonjour,
+
+Nous avons besoin de votre validation avant 14 heures pour finaliser le contrat.
+```
+
+Résultat :
+
+```json
+{
+  "type": "high_priority",
+  "priority": "high",
+  "action_required": true,
+  "summary": "Une validation urgente est demandée avant 14 heures."
+}
+```
+
+---
+
+## Structure recommandée du dépôt
+
+```text
+wf1-reception-tri-emails/
+├── workflow.json
+├── README.md
+├── screenshots/
+│   └── workflow-overview.png
+└── docs/
+    └── classification-rules.md
+```
+
+---
+
+## Sécurité
+
+Avant de publier le workflow sur GitHub, vérifiez les informations contenues dans le fichier JSON.
+
+Le fichier peut contenir des références vers :
+
+* les identifiants de credentials n8n ;
+* l’identifiant du compte Gmail ;
+* l’identifiant du bot Telegram ;
+* le `chat_id` Telegram ;
+* les identifiants de webhook ;
+* les identifiants internes de l’instance n8n.
+
+Ne publiez jamais :
+
+* une clé API Anthropic ;
+* un token Telegram ;
+* un mot de passe ;
+* un secret OAuth2 ;
+* des données personnelles ;
+* le contenu réel des emails.
+
+Il est recommandé de remplacer les valeurs propres à votre environnement par :
+
+* des variables d’environnement ;
+* des paramètres n8n ;
+* des placeholders ;
+* une configuration séparée non publiée.
+
+---
+
+## Limites actuelles
+
+Le workflow possède plusieurs limites :
+
+* le label Gmail doit être créé manuellement ;
+* seul le contenu textuel principal est analysé ;
+* les pièces jointes ne sont pas analysées ;
+* la priorité dépend de l’interprétation du modèle IA ;
+* tous les emails nécessitant une action reçoivent le même label ;
+* le `chat_id` Telegram est défini directement dans le workflow ;
+* le workflow vérifie la boîte Gmail chaque minute.
+
+---
+
+## Améliorations possibles
+
+Le projet peut être amélioré avec :
+
+* la création automatique du label Gmail ;
+* plusieurs labels selon la catégorie ;
+* l’analyse des pièces jointes ;
+* la détection des factures PDF ;
+* la création automatique de tâches ;
+* la préparation d’une réponse par WF3 ;
+* l’ajout d’un niveau de confiance ;
+* la détection des emails frauduleux ;
+* l’identification des expéditeurs importants ;
+* un historique dans Airtable, Notion ou PostgreSQL ;
+* un système de correction manuelle des classifications ;
+* une protection contre les doubles traitements ;
+* un résumé quotidien des emails importants.
+
+---
+
+## Évolutions possibles
+
+Une version plus avancée pourrait appliquer automatiquement plusieurs labels :
+
+| Classification     | Label Gmail       |
+| ------------------ | ----------------- |
+| Demande de réunion | `meeting_request` |
+| Facture            | `invoice`         |
+| Email urgent       | `high_priority`   |
+| Réponse nécessaire | `needs_response`  |
+| Newsletter         | `newsletter`      |
+
+Le workflow pourrait également transmettre automatiquement les emails prioritaires à :
+
+* WF2 pour programmer une réunion ;
+* WF3 pour préparer une réponse ;
+* WF4 pour les intégrer au briefing quotidien.
+
+---
+
+## Cas d’usage
+
+Ce workflow peut être utilisé par :
+
+* un dirigeant de PME ;
+* un commercial ;
+* un consultant indépendant ;
+* une agence immobilière ;
+* un cabinet comptable ;
+* un service client ;
+* un assistant administratif ;
+* une secrétaire virtuelle ;
+* une équipe commerciale ;
+* un entrepreneur recevant beaucoup d’emails.
+
+---
+
+## Statut du projet
+
+```text
+Actif
+```
+
+Le workflow est actuellement configuré pour :
+
+* surveiller Gmail toutes les minutes ;
+* recevoir des appels depuis WF0 ;
+* classifier les emails avec Claude Haiku ;
+* détecter les messages nécessitant une action ;
+* ajouter le label `needs_response` ;
+* envoyer une alerte Telegram ;
+* retourner un résultat structuré à l’orchestrateur.
+
+---
+
+## Auteur
+
+Projet développé dans le cadre de **BrainUp**, une initiative spécialisée dans la création d’automatisations IA personnalisées pour les entreprises.
+
+---
+
+## Licence
+
+Ce projet est proposé à des fins de démonstration, d’apprentissage et de portfolio.
+
+Avant toute utilisation en production, vérifiez :
+
+* la sécurité des credentials ;
+* la protection des données personnelles ;
+* les permissions Gmail ;
+* la conformité avec le RGPD ;
+* les coûts liés à l’utilisation des API.
