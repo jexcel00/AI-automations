@@ -1,0 +1,296 @@
+# WF4 — Briefings & Rappels
+
+## Présentation
+
+**WF4 — Briefings & Rappels** est un workflow n8n qui génère automatiquement un résumé de la journée à partir de Google Calendar et Gmail.
+
+Il rassemble :
+
+* les événements du calendrier ;
+* les emails non lus ;
+* le nombre de réunions ;
+* le nombre de messages à consulter.
+
+Claude Haiku transforme ensuite ces informations en un briefing court envoyé sur Telegram.
+
+---
+
+## Objectif
+
+Le workflow donne à l’utilisateur une vision rapide de ses priorités sans avoir à ouvrir séparément Gmail et Google Calendar.
+
+Deux briefings peuvent être générés :
+
+* un briefing du matin ;
+* un briefing du soir.
+
+---
+
+## Fonctionnement général
+
+```text
+Déclenchement à 08:00, 18:00 ou via WF0
+                       ↓
+             Normalisation du contexte
+                       ↓
+        Récupération des événements
+                       ↓
+          Agrégation du calendrier
+                       ↓
+        Récupération des emails non lus
+                       ↓
+            Compilation du contexte
+                       ↓
+       Génération du briefing avec IA
+                       ↓
+             Envoi sur Telegram
+                       ↓
+               Retour vers WF0
+```
+
+---
+
+## Déclencheurs
+
+### Briefing du matin
+
+```cron
+0 8 * * *
+```
+
+Le workflow s’exécute tous les jours à **08:00**.
+
+### Briefing du soir
+
+```cron
+0 18 * * *
+```
+
+Le workflow s’exécute tous les jours à **18:00**.
+
+### Appel depuis WF0
+
+L’orchestrateur peut déclencher un briefing à la demande en transmettant :
+
+```json
+{
+  "time_of_day": "morning"
+}
+```
+
+ou :
+
+```json
+{
+  "time_of_day": "evening"
+}
+```
+
+---
+
+## Récupération du calendrier
+
+Le workflow récupère jusqu’à 10 événements du calendrier principal.
+
+Pour chaque événement, il conserve :
+
+* le titre ;
+* la date ;
+* l’heure de début.
+
+Exemple :
+
+```json
+{
+  "summary": "Réunion commerciale",
+  "start": "2026-07-16T10:00:00+02:00"
+}
+```
+
+---
+
+## Récupération des emails
+
+Le workflow récupère jusqu’à 5 emails Gmail correspondant à la requête :
+
+```text
+is:unread
+```
+
+Il utilise principalement :
+
+* l’objet de l’email ;
+* son extrait lorsqu’aucun objet n’est disponible.
+
+---
+
+## Compilation du contexte
+
+Avant l’appel de l’intelligence artificielle, les données sont regroupées dans un texte structuré.
+
+Exemple :
+
+```text
+☀️ Briefing du matin
+
+ÉVÉNEMENTS DU JOUR:
+• Réunion commerciale — 10:00
+• Point projet — 14:30
+
+EMAILS NON LUS (2):
+• Validation du devis
+• Compte rendu de réunion
+```
+
+---
+
+## Intelligence artificielle
+
+Le workflow utilise :
+
+```text
+Claude Haiku 4.5
+```
+
+Le modèle doit produire un briefing :
+
+* en français ;
+* concis ;
+* directement actionnable ;
+* compatible avec Telegram Markdown ;
+* limité à 250 mots.
+
+---
+
+## Format du briefing
+
+Le briefing suit cette structure :
+
+```text
+☀️ Bonjour
+
+*Événements*
+• Réunion commerciale à 10h
+• Point projet à 14h30
+
+*Emails*
+• Validation du devis à traiter
+• Compte rendu reçu
+
+*Priorité*
+Commencez par préparer la réunion de 10h.
+```
+
+---
+
+## Notification Telegram
+
+Le briefing généré est envoyé dans une conversation Telegram configurée dans le workflow.
+
+Le mode Markdown permet d’utiliser :
+
+* des titres en gras ;
+* des listes ;
+* des emojis ;
+* une structure claire.
+
+---
+
+## Résultat retourné
+
+```json
+{
+  "briefing_sent": true,
+  "time_of_day": "morning",
+  "summary": "Briefing morning envoyé sur Telegram"
+}
+```
+
+---
+
+## Prérequis
+
+* une instance n8n ;
+* un compte Google Calendar ;
+* un compte Gmail ;
+* des credentials OAuth2 Google ;
+* un compte Anthropic ;
+* une clé API Anthropic ;
+* un bot Telegram ;
+* WF0 pour les briefings à la demande.
+
+---
+
+## Installation
+
+1. Importez le workflow dans n8n.
+2. Configurez Google Calendar.
+3. Configurez Gmail.
+4. Configurez Anthropic.
+5. Configurez Telegram.
+6. Remplacez le `chat_id`.
+7. Vérifiez le fuseau horaire de l’instance n8n.
+8. Activez le workflow.
+
+---
+
+## Structure recommandée
+
+```text
+wf4-daily-briefings/
+├── workflow.json
+├── README.md
+└── screenshots/
+    └── workflow-overview.png
+```
+
+---
+
+## Sécurité
+
+Avant de publier le workflow, retirez ou remplacez :
+
+* le `chat_id` Telegram ;
+* les identifiants de credentials ;
+* les identifiants de webhook ;
+* les identifiants internes n8n ;
+* les données liées aux comptes Gmail et Calendar.
+
+Aucun email réel, token, mot de passe ou secret OAuth2 ne doit être publié.
+
+---
+
+## Limites actuelles
+
+* seuls 10 événements sont récupérés ;
+* seuls 5 emails non lus sont analysés ;
+* les emails ne sont pas classés par importance ;
+* le calendrier n’est pas filtré explicitement sur la journée dans les paramètres du nœud ;
+* les rappels ne sont pas encore gérés séparément ;
+* le même briefing peut être envoyé par WF0 et par le déclencheur automatique ;
+* le `chat_id` est défini directement dans le workflow.
+
+---
+
+## Améliorations possibles
+
+* filtrer précisément les événements du jour ;
+* utiliser les résultats de WF1 pour ne montrer que les emails prioritaires ;
+* ajouter les tâches et rappels ;
+* afficher les conflits de calendrier ;
+* intégrer la météo ou les temps de trajet ;
+* inclure les brouillons préparés par WF3 ;
+* proposer les trois priorités principales ;
+* envoyer le briefing dans Slack ou Microsoft Teams ;
+* personnaliser le briefing selon l’utilisateur ;
+* générer un récapitulatif hebdomadaire.
+
+---
+
+## Auteur
+
+Projet développé dans le cadre de **BrainUp**, spécialisé dans les automatisations IA personnalisées pour entreprises.
+
+## Licence
+
+Projet destiné à la démonstration, à l’apprentissage et au portfolio.
