@@ -1,0 +1,401 @@
+{
+  "name": "WF4 — Briefings & Rappels",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "wf4-sch-001",
+      "name": "⏰ Schedule 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "wf4-sch-002",
+      "name": "⏰ Schedule 18:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "wf4-ewt-001",
+      "name": "📥 Appel Orchestrateur",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "trigger_source",
+              "value": "={{ $json.time_of_day ? 'orchestrator' : 'schedule' }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "time_of_day",
+              "value": "={{ $json.time_of_day || ($now.hour < 12 ? 'morning' : 'evening') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf4-set-001",
+      "name": "🔄 Normaliser",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -544,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "primary"
+        },
+        "limit": 10,
+        "options": {}
+      },
+      "id": "wf4-cal-001",
+      "name": "📅 Agenda du jour",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Rxq57GRsRvnFetkH",
+          "name": "Google Calendar account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all().map(i => i.json).filter(e => e && e.summary).map(e => ({ summary: e.summary, start: (e.start && (e.start.dateTime || e.start.date)) || '' }));\nreturn [{ json: { events, events_count: events.length } }];"
+      },
+      "id": "wf4-cod-001",
+      "name": "🧩 Agréger événements",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "q": "is:unread"
+        }
+      },
+      "id": "wf4-gml-001",
+      "name": "📧 Emails non lus",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "webhookId": "6b0628d9-dda5-42d5-bdb7-90e10ec3c41a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const eventData = $('🧩 Agréger événements').first().json;\nconst emails = $input.all().map(i => i.json).filter(e => e && (e.subject || e.snippet));\nconst triggerData = $('🔄 Normaliser').first().json;\nconst timeOfDay = triggerData.time_of_day || 'morning';\nconst greeting = timeOfDay === 'evening' ? '🌙 Briefing du soir' : '☀️ Briefing du matin';\nconst eventsText = eventData.events_count > 0 ? eventData.events.map(e => '• ' + e.summary + (e.start ? ' — ' + e.start.substring(11, 16) : '')).join('\\n') : 'Aucun événement prévu';\nconst emailsText = emails.length > 0 ? emails.map(e => '• ' + (e.subject || e.snippet || 'Sans objet')).join('\\n') : 'Aucun email non lu';\nconst context = greeting + '\\n\\nÉVÉNEMENTS DU JOUR:\\n' + eventsText + '\\n\\nEMAILS NON LUS (' + emails.length + '):\\n' + emailsText;\nreturn [{ json: { context, time_of_day: timeOfDay, events_count: eventData.events_count, emails_count: emails.length } }];"
+      },
+      "id": "wf4-cod-002",
+      "name": "🧩 Compiler contexte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1680605501",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf4-tgm-001",
+      "name": "📱 Envoyer Briefing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        0
+      ],
+      "webhookId": "1006ed8a-7f4a-47e6-b0bb-06eae243311a",
+      "credentials": {
+        "telegramApi": {
+          "id": "RwbDtppT1PJjMpLC",
+          "name": "Secretaire 99"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "briefing_sent",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "r2",
+              "name": "time_of_day",
+              "value": "={{ $('🔄 Normaliser').first().json.time_of_day }}",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "summary",
+              "value": "=Briefing {{ $('🔄 Normaliser').first().json.time_of_day }} envoyé sur Telegram",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf4-set-002",
+      "name": "↩️ Retour WF4",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.context }}",
+        "options": {
+          "systemMessage": "Tu es un assistant personnel. Génère un briefing quotidien concis en français. Format Telegram Markdown (*gras* pour les titres, • pour les listes). Maximum 250 mots. Structure : salutation + événements + emails. Direct et actionnable."
+        }
+      },
+      "id": "wf4-agt-001",
+      "name": "🤖 Générer Briefing",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        768,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "wf4-llm-002",
+      "name": "Claude Haiku - WF4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        768,
+        224
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "PcfLX8QGhCgVwmOZ",
+          "name": "Anthropic account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "⏰ Schedule 08:00": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Schedule 18:00": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Appel Orchestrateur": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Normaliser": {
+      "main": [
+        [
+          {
+            "node": "📅 Agenda du jour",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📅 Agenda du jour": {
+      "main": [
+        [
+          {
+            "node": "🧩 Agréger événements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Agréger événements": {
+      "main": [
+        [
+          {
+            "node": "📧 Emails non lus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Emails non lus": {
+      "main": [
+        [
+          {
+            "node": "🧩 Compiler contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Envoyer Briefing": {
+      "main": [
+        [
+          {
+            "node": "↩️ Retour WF4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Compiler contexte": {
+      "main": [
+        [
+          {
+            "node": "🤖 Générer Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Générer Briefing": {
+      "main": [
+        [
+          {
+            "node": "📱 Envoyer Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Haiku - WF4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 Générer Briefing",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "84e1380f-2b30-41f8-a14e-94a2e5f09bb5",
+  "meta": {
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "4RhcvIp72VWyN85t",
+  "tags": []
+}
