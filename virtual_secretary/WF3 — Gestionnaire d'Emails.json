@@ -1,0 +1,362 @@
+{
+  "name": "WF3 — Gestionnaire d'Emails",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "label:needs_response"
+        }
+      },
+      "id": "wf3-gmt-001",
+      "name": "📧 Gmail Trigger (needs_response)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        -144
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "wf3-ewt-001",
+      "name": "📥 Appel Orchestrateur",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "email_id",
+              "value": "={{ $json.id || $json.email_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "thread_id",
+              "value": "={{ $json.threadId || $json.thread_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "from",
+              "value": "={{ $json.from || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "subject",
+              "value": "={{ $json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n5",
+              "name": "action",
+              "value": "={{ $json.action || 'draft' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf3-set-001",
+      "name": "🔄 Normaliser WF3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -528,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.email_id }}"
+      },
+      "id": "wf3-gml-001",
+      "name": "📨 Récupérer Thread",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        0
+      ],
+      "webhookId": "ac66099d-aac3-47b2-b7e8-c688a69df323",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('🔄 Normaliser WF3').first().json.subject }}",
+        "message": "={{ $json.draft_content }}",
+        "options": {
+          "threadId": "={{ $('🔄 Normaliser WF3').first().json.thread_id }}"
+        }
+      },
+      "id": "wf3-gml-002",
+      "name": "📝 Créer Brouillon",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        0
+      ],
+      "webhookId": "f6da9eb1-dbc8-484d-a004-516366db3942",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BSKTkROxeWC8EZRQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1680605501",
+        "text": "=✉️ *Brouillon créé*\n*De :* {{ $('🔄 Normaliser WF3').first().json.from }}\n*Objet :* {{ $('🔄 Normaliser WF3').first().json.subject }}\n*Résumé :* {{ $('🧩 Parser Réponse').first().json.summary }}\n\nVérifiez vos brouillons Gmail avant d'envoyer.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf3-tgm-001",
+      "name": "📱 Notifier Brouillon",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        752,
+        0
+      ],
+      "webhookId": "9325c18c-6d44-4b3c-a348-08b46e7907d3",
+      "credentials": {
+        "telegramApi": {
+          "id": "RwbDtppT1PJjMpLC",
+          "name": "Secretaire 99"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "draft_created",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "r2",
+              "name": "summary",
+              "value": "={{ $('🧩 Parser Réponse').first().json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "telegram_notified",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wf3-set-002",
+      "name": "↩️ Retour WF3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1008,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \"Rédige une réponse à cet email.\\nDe: \" + $('🔄 Normaliser WF3').first().json.from + \"\\nObjet: \" + $('🔄 Normaliser WF3').first().json.subject + \"\\nContenu: \" + ($json.text || $json.snippet || '') }}",
+        "options": {}
+      },
+      "id": "wf3-agt-001",
+      "name": "🤖 Rédiger Réponse",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        16,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "wf3-llm-002",
+      "name": "Claude Sonnet - WF3",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        48,
+        208
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "PcfLX8QGhCgVwmOZ",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output || '';\nconst norm = $('🔄 Normaliser WF3').first().json;\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json?\\n?/g,'').replace(/```/g,'').trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parsed = { draft_content: raw, summary: 'Réponse générée', tone: 'neutral' };\n}\nreturn [{ json: { ...parsed, subject: norm.subject, from: norm.from, thread_id: norm.thread_id } }];"
+      },
+      "id": "wf3-cod-001",
+      "name": "🧩 Parser Réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📧 Gmail Trigger (needs_response)": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser WF3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Appel Orchestrateur": {
+      "main": [
+        [
+          {
+            "node": "🔄 Normaliser WF3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Normaliser WF3": {
+      "main": [
+        [
+          {
+            "node": "📨 Récupérer Thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Créer Brouillon": {
+      "main": [
+        [
+          {
+            "node": "📱 Notifier Brouillon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Notifier Brouillon": {
+      "main": [
+        [
+          {
+            "node": "↩️ Retour WF3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Récupérer Thread": {
+      "main": [
+        [
+          {
+            "node": "🤖 Rédiger Réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Sonnet - WF3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 Rédiger Réponse",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Rédiger Réponse": {
+      "main": [
+        [
+          {
+            "node": "🧩 Parser Réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Parser Réponse": {
+      "main": [
+        [
+          {
+            "node": "📝 Créer Brouillon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "cfddf184-53ea-4152-a5c0-9e0bdef38177",
+  "meta": {
+    "instanceId": "6873e46d71982872b8ee9407a1ec14c966939e71049af4970325765cd6a7c480"
+  },
+  "id": "FuphXi4nJjs89RuP",
+  "tags": []
+}
